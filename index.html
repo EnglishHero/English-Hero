@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ENGLISH HERO</title>
+<style>
+:root{--g:#14532d;--g2:#1c6b3c;--bg:#f6f8f6;--line:#dfe6e0;--tx:#1b2a21;--mut:#66756b;--ok:#1a7f43;--bad:#b3261e;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx)}
+header{background:var(--g);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+header b{letter-spacing:.12em;font-size:18px;cursor:pointer}
+header span{font-size:14px;opacity:.9}
+main{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px}
+h1{font-size:26px;margin:.2em 0}h2{font-size:20px;margin:.2em 0 .6em}h3{font-size:17px;margin:.2em 0}
+.mut{color:var(--mut);font-size:14px}
+.btn{display:inline-block;background:var(--g);color:#fff;border:0;border-radius:10px;padding:12px 20px;font-size:16px;cursor:pointer;text-decoration:none}
+.btn:hover{background:var(--g2)}.btn.alt{background:#fff;color:var(--g);border:1px solid var(--g)}.btn:disabled{opacity:.5}
+.btn.full{width:100%}
+input[type=text],select,textarea{width:100%;padding:11px 12px;border:1px solid #c5d0c8;border-radius:10px;font:inherit;background:#fff}
+textarea{min-height:90px}
+label.f{display:block;font-weight:600;margin:12px 0 6px}
+.hero{text-align:center;padding:50px 10px}
+.hero .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.tag{font-size:13px;padding:3px 10px;border-radius:20px;background:#e8f1ea;color:var(--g)}
+.tag.warn{background:#fff3d6;color:#7a5200}.tag.bad{background:#fde7e5;color:var(--bad)}
+.q{padding:12px 0;border-top:1px solid var(--line)}.q:first-of-type{border-top:0}
+.opt{display:block;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin:6px 0;cursor:pointer}
+.opt:has(input:checked){border-color:var(--g);background:#eef6f0}
+.opt input{margin-right:8px}
+.txt{background:#f3f6f3;border-left:4px solid var(--g);padding:12px 14px;border-radius:6px;white-space:pre-wrap;margin:10px 0}
+.chip{display:inline-block;padding:8px 12px;margin:4px;border:1px solid var(--g);border-radius:8px;background:#fff;cursor:pointer}
+.chip.used{opacity:.3;pointer-events:none}.chosen{min-height:46px;border:1px dashed #9fb3a5;border-radius:10px;padding:4px;margin-bottom:6px}
+.chosen .chip{background:#eef6f0}
+.big{font-size:44px;font-weight:700;color:var(--g)}
+.res.ok{border-left:4px solid var(--ok)}.res.no{border-left:4px solid var(--bad)}.res.man{border-left:4px solid #c9a227}
+img.pic{max-width:100%;border-radius:8px;margin:8px 0}
+.err{color:var(--bad);margin-top:10px}
+.sticky{position:sticky;bottom:0;background:var(--bg);padding:12px 0}
+</style>
+</head>
+<body>
+<header><b onclick="goHome()">ENGLISH HERO</b><span id="who"></span></header>
+<main id="app"></main>
+
+<script>
+/* ВСТАВТЕ СЮДИ URL веб-застосунку Google Apps Script (закінчується на /exec) */
+const API = 'https://script.google.com/macros/s/AKfycbypTCriq9XGozFB5SwO_dYvxCtBjvNZE1qWUAXcErA5PFTZoxtDr1nZoaSHTvpvPiH1/exec';
+const TEACHER_PAGE = 'teacher.html';
+
+const S = { name: '', group: '', list: [], task: null, ans: {}, ord: {} };
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const app = h => { $('app').innerHTML = h; window.scrollTo(0, 0); };
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+
+async function api(action, data) {
+  if (API.indexOf('http') !== 0) throw new Error('Сайт ще не підключений до бази: вставте URL Apps Script у файл index.html.');
+  let r;
+  try { r = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ action }, data || {})) }); }
+  catch (e) { throw new Error('Немає зв’язку з сервером. Перевірте інтернет і спробуйте ще раз.'); }
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error);
+  return j.data;
+}
+
+/* ---------- Головна ---------- */
+function goHome() {
+  S.task = null; $('who').textContent = '';
+  app(`<div class="hero"><h1>Welcome to English Hero!</h1>
+  <p class="mut">Онлайн-домашні завдання з англійської</p>
+  <div class="btns"><button class="btn" onclick="studentLogin()">Student Login</button>
+  <a class="btn alt" href="${TEACHER_PAGE}">Teacher Login</a></div></div>`);
+}
+
+/* ---------- Вхід учня ---------- */
+async function studentLogin(msg) {
+  const saved = store.get('eh_student') || {};
+  app(`<div class="card"><h2>Вхід для учня</h2>
+  <label class="f">Ваше ім’я та прізвище</label><input type="text" id="n" value="${esc(saved.name)}" autocomplete="name">
+  <label class="f">Група</label><select id="g"><option>Завантаження…</option></select>
+  <div class="err" id="e">${esc(msg)}</div>
+  <p><button class="btn full" id="go" onclick="doLogin()">Увійти</button></p></div>`);
+  try {
+    const gs = await api('groups');
+    $('g').innerHTML = '<option value="">— оберіть групу —</option>' + gs.map(g => `<option ${g === saved.group ? 'selected' : ''}>${esc(g)}</option>`).join('');
+  } catch (e) { $('e').textContent = e.message; }
+}
+async function doLogin() {
+  $('e').textContent = ''; $('go').disabled = true;
+  try {
+    const d = await api('login', { name: $('n').value, group: $('g').value });
+    S.name = d.name; S.group = d.group; S.list = d.assignments;
+    store.set('eh_student', { name: S.name, group: S.group });
+    showList();
+  } catch (e) { $('e').textContent = e.message; $('go').disabled = false; }
+}
+
+/* ---------- Список завдань ---------- */
+async function showList() {
+  if (!S.name) return studentLogin();
+  $('who').textContent = S.name + ' · ' + S.group;
+  const d = await api('login', { name: S.name, group: S.group }).catch(e => null);
+  if (d) S.list = d.assignments;
+  app(`<h2>Мої домашні завдання</h2>` + (S.list.length ? S.list.map(a => `<div class="card row">
+    <div><h3>${esc(a.title)}</h3><div class="mut">${a.deadline ? 'Дедлайн: ' + esc(a.deadline) : 'Без дедлайну'}</div></div>
+    <div>${a.done
+      ? `<span class="tag ${a.pending ? 'warn' : ''}">${a.pending ? 'Очікує перевірки' : a.percent + '%'}</span> <button class="btn alt" onclick="openResult('${a.id}')">Результат</button>`
+      : `<button class="btn" onclick="openTask('${a.id}')">Виконати</button>`}</div></div>`).join('')
+    : '<div class="card mut">Для вашої групи ще немає завдань.</div>') +
+    `<p><button class="btn alt" onclick="logout()">Вийти</button></p>`);
+}
+function logout() { S.name = ''; S.group = ''; store.del('eh_student'); goHome(); }
+
+/* ---------- Виконання завдання ---------- */
+async function openTask(id) {
+  app('<div class="card mut">Завантаження…</div>');
+  try {
+    const d = await api('task', { name: S.name, group: S.group, assignmentId: id });
+    S.task = d; const dr = store.get('eh_draft_' + S.name + id) || {};
+    S.ans = dr.ans || {}; S.ord = dr.ord || {};
+    renderTask();
+  } catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Назад</button>`); }
+}
+const saveDraft = () => store.set('eh_draft_' + S.name + S.task.assignmentId, { ans: S.ans, ord: S.ord });
+function setAns(k, v) { S.ans[k] = v; saveDraft(); }
+
+function media(url, kind) {
+  if (!url) return '';
+  const m = String(url).match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  if (kind === 'audio') return m ? `<iframe src="https://drive.google.com/file/d/${m[1]}/preview" style="width:100%;height:90px;border:0"></iframe>` : `<audio controls style="width:100%" src="${esc(url)}"></audio>`;
+  return `<img class="pic" src="${m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1200' : esc(url)}" alt="">`;
+}
+
+function renderTask() {
+  const hw = S.task.hw;
+  app(`<h2>${esc(hw.title)}</h2><div class="mut">${S.task.deadline ? 'Дедлайн: ' + esc(S.task.deadline) : ''}</div>` +
+    hw.sections.map((s, si) => `<div class="card"><h3>${esc(s.title || 'Завдання ' + (si + 1))}</h3>
+      ${s.instructions ? `<div class="mut">${esc(s.instructions)}</div>` : ''}
+      ${s.text ? `<div class="txt">${esc(s.text)}</div>` : ''}${media(s.imageUrl, 'img')}${media(s.audioUrl, 'audio')}
+      ${s.items.map((it, i) => itemHTML(s, si, it, i)).join('')}</div>`).join('') +
+    `<div class="sticky"><div class="err" id="e"></div><button class="btn full" id="sb" onclick="submitTask()">Надіслати роботу</button></div>`);
+  hw.sections.forEach((s, si) => { if (s.type === 'order') s.items.forEach((it, i) => drawOrd(si + '.' + i, si, i)); });
+}
+
+function itemHTML(s, si, it, i) {
+  const k = si + '.' + i, v = S.ans[k] || '';
+  let body;
+  if (s.type === 'match')
+    body = `<select onchange="setAns('${k}',this.value)"><option value="">— оберіть —</option>${s.rights.map(r => `<option ${r === v ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>`;
+  else if (s.type === 'order') body = `<div id="o${k}"></div>`;
+  else if (it.options)
+    body = it.options.map((o, n) => `<label class="opt"><input type="radio" name="r${k}" ${o === v ? 'checked' : ''} onchange="setAns('${k}',S.task.hw.sections[${si}].items[${i}].options[${n}])">${esc(o)}</label>`).join('');
+  else if (s.type === 'open' || s.type === 'translation' || s.type === 'transform')
+    body = `<textarea oninput="setAns('${k}',this.value)">${esc(v)}</textarea>`;
+  else body = `<input type="text" value="${esc(v)}" oninput="setAns('${k}',this.value)" autocomplete="off" autocapitalize="off" spellcheck="false">`;
+  return `<div class="q"><div style="white-space:pre-wrap;margin-bottom:6px"><b>${i + 1}.</b> ${esc(it.q)}</div>${body}</div>`;
+}
+
+function drawOrd(k, si, i) {
+  const words = S.task.hw.sections[si].items[i].words, ch = S.ord[k] || [];
+  $('o' + k).innerHTML = `<div class="chosen">${ch.map((w, n) => `<span class="chip" onclick="ordUndo('${k}',${si},${i},${n})">${esc(words[w])}</span>`).join('')}</div>` +
+    words.map((w, n) => `<span class="chip ${ch.indexOf(n) >= 0 ? 'used' : ''}" onclick="ordAdd('${k}',${si},${i},${n})">${esc(w)}</span>`).join('');
+}
+function ordAdd(k, si, i, n) { (S.ord[k] = S.ord[k] || []).push(n); ordSync(k, si, i); }
+function ordUndo(k, si, i, pos) { S.ord[k].splice(pos, 1); ordSync(k, si, i); }
+function ordSync(k, si, i) {
+  const w = S.task.hw.sections[si].items[i].words;
+  S.ans[k] = S.ord[k].map(n => w[n]).join(' '); saveDraft(); drawOrd(k, si, i);
+}
+
+async function submitTask() {
+  const total = S.task.hw.sections.reduce((a, s) => a + s.items.length, 0);
+  const done = Object.keys(S.ans).filter(k => String(S.ans[k]).trim()).length;
+  if (done < total && !confirm(`Ви відповіли на ${done} із ${total} питань. Надіслати все одно?`)) return;
+  $('sb').disabled = true; $('e').textContent = '';
+  try {
+    const r = await api('submit', { name: S.name, group: S.group, assignmentId: S.task.assignmentId, answers: S.ans });
+    store.del('eh_draft_' + S.name + S.task.assignmentId);
+    showResult(r, S.task.hw);
+  } catch (e) { $('e').textContent = e.message; $('sb').disabled = false; }
+}
+
+/* ---------- Результат ---------- */
+async function openResult(id) {
+  app('<div class="card mut">Завантаження…</div>');
+  try {
+    const [r, t] = await Promise.all([
+      api('myResult', { name: S.name, group: S.group, assignmentId: id }),
+      api('resultView', { name: S.name, group: S.group, assignmentId: id }).catch(() => null)
+    ]);
+    showResult(r, t && t.hw);
+  } catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Назад</button>`); }
+}
+function showResult(r, hw) {
+  const by = {}; r.details.forEach(d => by[d.key] = d);
+  const pend = r.pendingManual || r.pending;
+  app(`<div class="card" style="text-align:center"><div class="mut">Ваш результат</div><div class="big">${r.percent}%</div>
+    <div>${r.score} ${r.max ? 'з ' + r.max + ' балів' : 'балів'}</div>
+    ${pend ? '<p><span class="tag warn">Відкриті відповіді перевірить викладач — відсоток може змінитися</span></p>' : ''}
+    ${r.comment ? `<p class="txt">${esc(r.comment)}</p>` : ''}</div>` +
+    (hw ? hw.sections.map((s, si) => `<div class="card"><h3>${esc(s.title || 'Завдання ' + (si + 1))}</h3>` + s.items.map((it, i) => {
+      const d = by[si + '.' + i]; if (!d) return '';
+      const cls = d.manual ? 'man' : d.ok ? 'ok' : 'no';
+      return `<div class="q res ${cls}" style="padding-left:12px"><div><b>${i + 1}.</b> ${esc(it.q)}</div>
+        <div>Ваша відповідь: <b>${esc(d.given) || '—'}</b></div>
+        ${d.manual ? '<div class="mut">Перевіряє викладач</div>' : d.ok ? '' : `<div>Правильно: <b>${esc(d.correct)}</b></div>`}</div>`;
+    }).join('') + '</div>').join('') : '') +
+    `<button class="btn" onclick="showList()">До списку завдань</button>`);
+}
+
+/* старт */
+const sv = store.get('eh_student');
+goHome();
+</script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ENGLISH HERO — Викладач</title>
+<style>
+:root{--g:#14532d;--g2:#1c6b3c;--bg:#f6f8f6;--line:#dfe6e0;--tx:#1b2a21;--mut:#66756b;--ok:#1a7f43;--bad:#b3261e;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx)}
+header{background:var(--g);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+header b{letter-spacing:.12em;font-size:18px}header a,header button{color:#fff;background:none;border:0;font:inherit;cursor:pointer;text-decoration:underline}
+main{max-width:980px;margin:0 auto;padding:16px 14px 60px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+nav button{padding:10px 16px;border:1px solid var(--line);background:#fff;border-radius:10px;font:inherit;cursor:pointer}
+nav button.on{background:var(--g);color:#fff;border-color:var(--g)}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+h2{font-size:20px;margin:.2em 0 .6em}h3{font-size:16px;margin:.2em 0}
+.mut{color:var(--mut);font-size:14px}
+.btn{background:var(--g);color:#fff;border:0;border-radius:10px;padding:10px 16px;font:inherit;cursor:pointer}
+.btn.alt{background:#fff;color:var(--g);border:1px solid var(--g)}.btn.sm{padding:5px 10px;font-size:14px}.btn.red{background:#fff;color:var(--bad);border:1px solid var(--bad)}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid #c5d0c8;border-radius:10px;font:inherit;background:#fff}
+textarea{min-height:80px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+label.f{display:block;font-weight:600;margin:10px 0 4px;font-size:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:1 1 180px}.row>.btn{flex:0 0 auto}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+th{background:#eef3ef}tr.c{cursor:pointer}tr.c:hover{background:#f3f8f4}
+.tag{font-size:12px;padding:2px 9px;border-radius:20px;background:#e8f1ea;color:var(--g)}.tag.w{background:#fff3d6;color:#7a5200}
+.sec{border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;background:#fbfdfb}
+.err{color:var(--bad)}.ok{color:var(--ok)}.scroll{overflow-x:auto}
+.ans{padding:8px 10px;border-left:4px solid var(--line);margin:6px 0}.ans.y{border-color:var(--ok)}.ans.n{border-color:var(--bad)}.ans.m{border-color:#c9a227}
+</style>
+</head>
+<body>
+<header><b>ENGLISH HERO · ВИКЛАДАЧ</b><span><a href="index.html">Сайт учня</a> <button id="lo" onclick="logout()" style="display:none">Вийти</button></span></header>
+<main id="app"></main>
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbypTCriq9XGozFB5SwO_dYvxCtBjvNZE1qWUAXcErA5PFTZoxtDr1nZoaSHTvpvPiH1/exec';   /* той самий URL, що й в index.html */
+const T = { token: null, tab: 'groups', groups: [], hws: [], asg: [], res: [], E: null, hwCache: {} };
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const app = h => $('app').innerHTML = h;
+try { T.token = sessionStorage.getItem('eh_t'); } catch (e) {}
+
+async function api(action, data) {
+  if (API.indexOf('http') !== 0) throw new Error('Вставте URL Apps Script у файл teacher.html');
+  let r; try { r = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ action, token: T.token }, data || {})) }); }
+  catch (e) { throw new Error('Немає зв’язку з сервером'); }
+  const j = await r.json();
+  if (!j.ok) { if (/Сесія/.test(j.error)) { T.token = null; loginView(j.error); } throw new Error(j.error); }
+  return j.data;
+}
+const toast = (m, bad) => { const e = $('msg'); if (e) { e.className = bad ? 'err' : 'ok'; e.textContent = m; } else if (bad) alert(m); };
+const run = async f => { try { await f(); } catch (e) { toast(e.message, 1); } };
+
+/* ---------- Вхід ---------- */
+function loginView(msg) {
+  $('lo').style.display = 'none';
+  app(`<div class="card" style="max-width:420px;margin:40px auto"><h2>Вхід викладача</h2>
+    <label class="f">Пароль</label><input type="password" id="pw" onkeydown="if(event.key==='Enter')doLogin()">
+    <p class="err" id="e">${esc(msg)}</p><button class="btn" onclick="doLogin()">Увійти</button></div>`);
+}
+async function doLogin() {
+  try {
+    const d = await api('teacherLogin', { password: $('pw').value });
+    T.token = d.token; try { sessionStorage.setItem('eh_t', d.token); } catch (e) {}
+    start();
+  } catch (e) { $('e').textContent = e.message; }
+}
+function logout() { T.token = null; try { sessionStorage.removeItem('eh_t'); } catch (e) {} loginView(''); }
+
+async function start() {
+  $('lo').style.display = '';
+  try { await load(); show(T.tab); } catch (e) { if (T.token) app(`<div class="card err">${esc(e.message)}</div>`); }
+}
+async function load() {
+  [T.groups, T.hws, T.asg] = await Promise.all([api('groups'), api('homeworks'), api('assignments')]);
+}
+function show(tab) {
+  T.tab = tab;
+  const tabs = { groups: 'Групи й учні', hw: 'Завдання', asg: 'Призначити', res: 'Результати' };
+  app(`<nav>${Object.keys(tabs).map(k => `<button class="${k === tab ? 'on' : ''}" onclick="show('${k}')">${tabs[k]}</button>`).join('')}</nav><div id="msg"></div><div id="tab"></div>`);
+  ({ groups: viewGroups, hw: viewHw, asg: viewAsg, res: viewRes })[tab]();
+}
+const refresh = async () => { await load(); show(T.tab); };
+
+/* ---------- Групи ---------- */
+function viewGroups() {
+  $('tab').innerHTML = `<div class="card"><h2>Нова група</h2><div class="row"><input id="gn" placeholder="Назва групи, напр. Teens B1"><button class="btn" onclick="addGroup()">Створити</button></div></div>` +
+    T.groups.map((g, gi) => `<div class="card"><h2>${esc(g.name)} <span class="tag">${g.students.length} учнів</span></h2>
+      <div>${g.students.map((s, si) => `<span class="tag" style="margin:2px;display:inline-block;padding:5px 10px">${esc(s)} <a href="#" onclick="rmSt(${gi},${si});return false" style="color:var(--bad);text-decoration:none">✕</a></span>`).join('') || '<span class="mut">Учнів ще немає</span>'}</div>
+      <label class="f">Додати учнів (кожен з нового рядка — так, як вони вводитимуть ім’я)</label>
+      <textarea id="st${gi}" style="font-family:inherit"></textarea><p><button class="btn sm" onclick="addSt(${gi})">Додати</button></p></div>`).join('');
+}
+const addGroup = () => run(async () => { await api('addGroup', { name: $('gn').value }); await refresh(); });
+const addSt = gi => run(async () => { const n = await api('addStudents', { group: T.groups[gi].name, names: $('st' + gi).value.split('\n') }); await refresh(); toast('Додано: ' + n); });
+const rmSt = (gi, si) => confirm('Видалити учня зі списку?') && run(async () => { await api('removeStudent', { group: T.groups[gi].name, name: T.groups[gi].students[si] }); await refresh(); });
+
+/* ---------- Завдання (редактор + імпорт) ---------- */
+const TYPES = { choice: 'Multiple choice', gap: 'Gap filling', wordform: 'Word formation', match: 'Matching', transform: 'Sentence transformation',
+  order: 'Word order', tf: 'True / False', error: 'Error correction', reading: 'Reading comprehension', listening: 'Listening', open: 'Open-ended', translation: 'Translation' };
+const HINT = { choice: 'Питання :: правильна відповідь :: варіант1 ; варіант2 ; варіант3', gap: 'She ___ (go) to school. :: goes', wordform: 'He is very ___. (SUCCESS) :: successful',
+  match: 'слово :: переклад/визначення', transform: 'Речення. Keyword: X :: правильний варіант|інший допустимий', order: 'Повне правильне речення (слова перемішаються автоматично)',
+  tf: 'Твердження :: True', error: 'Речення з помилкою :: виправлене речення', reading: 'Питання :: відповідь  (або з варіантами :: ... :: a ; b ; c)',
+  listening: 'Питання :: відповідь  (або з варіантами :: ... :: a ; b ; c)', open: 'Питання (перевіряє викладач)', translation: 'Речення :: переклад|варіант' };
+const newSec = () => ({ type: 'choice', title: '', instructions: '', text: '', imageUrl: '', audioUrl: '', lines: '', pts: 1 });
+
+function fromLines(s) {
+  const L = s.lines.split('\n').map(x => x.trim()).filter(Boolean), o = { type: s.type, title: s.title, instructions: s.instructions };
+  ['text', 'imageUrl', 'audioUrl'].forEach(k => { if (s[k]) o[k] = s[k]; });
+  const pts = Number(s.pts) || 1;
+  if (s.type === 'match') o.pairs = L.map(l => { const p = l.split('::').map(x => x.trim()); return { l: p[0], r: p[1] || '', points: pts }; });
+  else o.items = L.map(l => {
+    const p = l.split('::').map(x => x.trim()), it = { q: p[0], points: pts };
+    if (s.type === 'order') { it.q = 'Складіть речення'; it.answer = p[0]; return it; }
+    if (s.type === 'open') return it;
+    let a = p[1] || ''; if (s.type === 'tf') a = /^t/i.test(a) ? 'True' : 'False';
+    it.answer = a;
+    if (p[2]) { it.options = p[2].split(';').map(x => x.trim()).filter(Boolean); if (a && it.options.indexOf(a) < 0) it.options.push(a); }
+    return it;
+  });
+  return o;
+}
+function toSec(o) {
+  const s = Object.assign(newSec(), { type: o.type, title: o.title || '', instructions: o.instructions || '', text: o.text || '', imageUrl: o.imageUrl || '', audioUrl: o.audioUrl || '' });
+  if (o.type === 'match') { s.lines = (o.pairs || []).map(p => p.l + ' :: ' + p.r).join('\n'); s.pts = (o.pairs[0] || {}).points || 1; }
+  else { s.pts = ((o.items || [])[0] || {}).points || 1;
+    s.lines = (o.items || []).map(i => o.type === 'order' ? i.answer : [i.q, [].concat(i.answer == null ? '' : i.answer).join('|'), (i.options || []).join(' ; ')].join(' :: ').replace(/( :: )+$/, '')).join('\n'); }
+  return s;
+}
+
+function viewHw() {
+  $('tab').innerHTML = `<div class="card"><h2>Мої завдання</h2>${T.hws.map(h => `<div class="row" style="padding:6px 0;border-top:1px solid var(--line)"><div>${esc(h.title)}<div class="mut">${esc(h.created)}</div></div><button class="btn alt sm" onclick="editHw('${h.id}')">Редагувати</button></div>`).join('') || '<div class="mut">Поки порожньо</div>'}
+    <p><button class="btn" onclick="T.E={title:'',sections:[newSec()]};drawEd()">+ Нове завдання</button></p></div><div id="ed"></div>
+    <div class="card"><h2>Імпорт із Claude (JSON)</h2><textarea id="imp" placeholder='{"title":"...","sections":[...]}'></textarea>
+    <p><button class="btn" onclick="impHw()">Імпортувати в редактор</button></p></div>`;
+  if (T.E) drawEd();
+}
+const editHw = id => run(async () => { const h = await api('getHomework', { id }); T.E = { id: h.id, title: h.title, sections: h.sections.map(toSec) }; drawEd(); });
+function impHw() { run(async () => {
+  const h = JSON.parse($('imp').value.replace(/^```json|```$/g, '').trim());
+  if (!h.title || !Array.isArray(h.sections)) throw new Error('У JSON має бути title і sections');
+  T.E = { id: h.id, title: h.title, sections: h.sections.map(toSec) }; drawEd(); toast('Завантажено в редактор — перевірте й збережіть'); }); }
+
+function drawEd() {
+  const E = T.E; if (!E) return;
+  $('ed').innerHTML = `<div class="card"><h2>Редактор</h2><label class="f">Назва завдання</label><input value="${esc(E.title)}" oninput="T.E.title=this.value">
+  ${E.sections.map((s, i) => `<div class="sec"><div class="row"><select onchange="secSet(${i},'type',this.value,1)">${Object.keys(TYPES).map(k => `<option value="${k}" ${k === s.type ? 'selected' : ''}>${TYPES[k]}</option>`).join('')}</select>
+    <input placeholder="Заголовок секції" value="${esc(s.title)}" oninput="secSet(${i},'title',this.value)"><input type="number" min="1" style="max-width:90px" title="Балів за питання" value="${s.pts}" oninput="secSet(${i},'pts',this.value)"><button class="btn red sm" onclick="T.E.sections.splice(${i},1);drawEd()">✕</button></div>
+    <label class="f">Інструкція</label><input value="${esc(s.instructions)}" oninput="secSet(${i},'instructions',this.value)">
+    <label class="f">Текст (для reading, за потреби)</label><textarea style="font-family:inherit" oninput="secSet(${i},'text',this.value)">${esc(s.text)}</textarea>
+    <div class="row"><div><label class="f">Посилання на зображення (Google Drive / URL)</label><input value="${esc(s.imageUrl)}" oninput="secSet(${i},'imageUrl',this.value)"></div>
+    <div><label class="f">Посилання на аудіо (Google Drive / URL)</label><input value="${esc(s.audioUrl)}" oninput="secSet(${i},'audioUrl',this.value)"></div></div>
+    <label class="f">Питання — по одному в рядку <span class="mut">(${esc(HINT[s.type])})</span></label><textarea oninput="secSet(${i},'lines',this.value)">${esc(s.lines)}</textarea></div>`).join('')}
+  <div class="row"><button class="btn alt" onclick="T.E.sections.push(newSec());drawEd()">+ Секція</button><button class="btn" onclick="saveHw()">Зберегти завдання</button></div></div>`;
+}
+function secSet(i, k, v, redraw) { T.E.sections[i][k] = v; if (redraw) drawEd(); }
+const saveHw = () => run(async () => {
+  const E = T.E; if (!E.title.trim()) throw new Error('Введіть назву');
+  const id = await api('saveHomework', { hw: { id: E.id, title: E.title, sections: E.sections.map(fromLines) } });
+  T.E = null; await refresh(); toast('Збережено');
+});
+
+/* ---------- Призначити ---------- */
+function viewAsg() {
+  $('tab').innerHTML = `<div class="card"><h2>Призначити завдання групі</h2><div class="row">
+    <select id="ah">${T.hws.map(h => `<option value="${h.id}">${esc(h.title)}</option>`).join('')}</select>
+    <select id="ag">${T.groups.map(g => `<option>${esc(g.name)}</option>`).join('')}</select>
+    <input type="date" id="ad"><button class="btn" onclick="assign()">Призначити</button></div></div>
+    <div class="card"><h2>Призначені</h2><div class="scroll"><table><tr><th>Завдання</th><th>Група</th><th>Дедлайн</th></tr>${T.asg.map(a => `<tr><td>${esc(a.title)}</td><td>${esc(a.group)}</td><td>${esc(a.deadline) || '—'}</td></tr>`).join('')}</table></div></div>`;
+}
+const assign = () => run(async () => { await api('assign', { hwId: $('ah').value, group: $('ag').value, deadline: $('ad').value }); await refresh(); toast('Призначено'); });
+
+/* ---------- Результати ---------- */
+function viewRes() {
+  $('tab').innerHTML = `<div class="card"><div class="row"><select id="rs" onchange="loadRes()"><option value="">Усі роботи</option>${T.asg.map(a => `<option value="${a.id}">${esc(a.title)} — ${esc(a.group)}</option>`).join('')}</select>
+    <button class="btn alt" onclick="csv()">Експорт CSV</button></div><div class="mut" style="margin-top:8px">Усі результати також автоматично лежать в аркуші Submissions вашої Google Таблиці.</div></div><div id="rl"></div><div id="rd"></div>`;
+  loadRes();
+}
+const loadRes = () => run(async () => {
+  const id = $('rs').value; T.res = await api('results', { assignmentId: id });
+  const avg = T.res.length ? Math.round(T.res.reduce((a, r) => a + r.percent, 0) / T.res.length) : 0;
+  let miss = ''; if (id) { const m = await api('notSubmitted', { assignmentId: id }); miss = m.length ? `<p class="mut">Ще не здали: ${m.map(esc).join(', ')}</p>` : '<p class="mut">Здали всі 👍</p>'; }
+  $('rl').innerHTML = `<div class="card"><h2>Робіт: ${T.res.length} · середній результат: ${avg}%</h2>${miss}<div class="scroll"><table><tr><th>Учень</th><th>Група</th><th>Завдання</th><th>Бали</th><th>%</th><th>Статус</th><th>Здано</th></tr>
+    ${T.res.map((r, i) => `<tr class="c" onclick="detail(${i})"><td>${esc(r.student)}</td><td>${esc(r.group)}</td><td>${esc(r.title)}</td><td>${r.score}/${r.max}</td><td>${r.percent}%</td><td><span class="tag ${/Очікує/.test(r.status) ? 'w' : ''}">${esc(r.status)}</span></td><td>${esc(r.time)}</td></tr>`).join('')}</table></div></div>`;
+  $('rd').innerHTML = '';
+});
+async function detail(i) { run(async () => {
+  const r = T.res[i]; if (!T.hwCache[r.hwId]) T.hwCache[r.hwId] = await api('getHomework', { id: r.hwId }).catch(() => null);
+  const hw = T.hwCache[r.hwId], by = {}; r.details.forEach(d => by[d.key] = d);
+  const q = (si, ii) => hw ? ((hw.sections[si].items || hw.sections[si].pairs || [])[ii] || {}) : {};
+  const manualMax = r.details.filter(d => d.manual).reduce((a, d) => a + d.points, 0);
+  $('rd').innerHTML = `<div class="card"><h2>${esc(r.student)} — ${esc(r.title)} (${r.percent}%)</h2>` + r.details.map(d => { const [si, ii] = d.key.split('.').map(Number), it = q(si, ii);
+    return `<div class="ans ${d.manual ? 'm' : d.ok ? 'y' : 'n'}"><div class="mut">${si + 1}.${ii + 1} ${esc(it.q || it.l || '')}</div><div>Відповідь: <b>${esc(d.given) || '—'}</b></div>${d.manual ? '' : d.ok ? '' : `<div>Правильно: <b>${esc(d.correct)}</b></div>`}</div>`; }).join('') +
+    (manualMax ? `<div class="row" style="margin-top:10px"><div><label class="f">Бали за відкриті відповіді (0–${manualMax})</label><input type="number" id="ms" min="0" max="${manualMax}"></div><div><label class="f">Коментар учню</label><input id="mc" value="${esc(r.comment)}"></div><button class="btn" onclick="gradeM(${i})">Зберегти оцінку</button></div>` : '') + '</div>';
+  $('rd').scrollIntoView({ behavior: 'smooth' }); }); }
+const gradeM = i => run(async () => { await api('gradeManual', { row: T.res[i].row, score: $('ms').value, comment: $('mc').value }); await loadRes(); toast('Оцінку збережено'); });
+
+function csv() {
+  const c = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const lines = [['Дата', 'Група', 'Учень', 'Завдання', 'Бали', 'Максимум', 'Відсоток', 'Статус', 'Коментар']].concat(T.res.map(r => [r.time, r.group, r.student, r.title, r.score, r.max, r.percent, r.status, r.comment]));
+  const blob = new Blob(['\ufeff' + lines.map(l => l.map(c).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'english-hero-results.csv'; a.click();
+}
+
+T.token ? start() : loginView('');
+</script>
+</body>
+</html>
