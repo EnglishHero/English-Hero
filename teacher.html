@@ -220,7 +220,7 @@ function viewDecks() {
 function drawDeckEd() {
   if (!T.D || !$('ded')) return;
   $('ded').innerHTML = `<div class="card"><h2>Редактор набору</h2><label class="f">Назва набору</label><input value="${esc(T.D.title)}" oninput="T.D.title=this.value">
-    <label class="f">Картки — по одній у рядку <span class="mut">(англійське слово :: переклад :: приклад речення; приклад необов’язковий)</span></label>
+    <label class="f">Картки — по одній у рядку <span class="mut">(англійське слово :: переклад :: приклад речення; приклад необов’язковий. Варіанти слова — через |, напр. colour|color)</span></label>
     <textarea style="min-height:200px" placeholder="isolate :: ізолювати :: They isolated the patient." oninput="T.D.lines=this.value">${esc(T.D.lines)}</textarea>
     <p><button class="btn" onclick="saveDk()">Зберегти набір</button></p></div>`;
 }
@@ -238,7 +238,7 @@ const delDa = id => run(async () => { await api('deleteDeckAssign', { id }); awa
 /* ---------- Результати ---------- */
 function viewRes() {
   $('tab').innerHTML = `<div class="card"><div class="row"><select id="rs" onchange="loadRes()"><option value="">Усі роботи</option>${T.asg.map(a => `<option value="${a.id}">${esc(a.title)} — ${esc(a.group)}</option>`).join('')}</select>
-    <button class="btn alt" onclick="csv()">Експорт CSV</button></div><div class="mut" style="margin-top:8px">Усі результати також автоматично лежать в аркуші Submissions вашої Google Таблиці.</div></div><div id="rl"></div><div id="rd"></div>`;
+    <button class="btn alt" onclick="csv()">Експорт CSV</button><button class="btn red" onclick="delAllRes()">Видалити всі результати цього завдання</button></div><div class="mut" style="margin-top:8px">Усі результати також автоматично лежать в аркуші Submissions вашої Google Таблиці.</div></div><div id="rl"></div><div id="rd"></div>`;
   loadRes();
 }
 const loadRes = () => run(async () => {
@@ -258,8 +258,11 @@ async function detail(i) { run(async () => {
   const manualMax = r.details.filter(d => d.manual).reduce((a, d) => a + d.points, 0);
   $('rd').innerHTML = `<div class="card"><h2>${esc(r.student)} — ${esc(r.title)} (${r.percent}%)</h2>` + r.details.map(d => { const [si, ii] = d.key.split('.').map(Number), it = q(si, ii);
     return `<div class="ans ${d.manual ? 'm' : d.ok ? 'y' : 'n'}"><div class="mut">${si + 1}.${ii + 1} ${rich(it.q || it.l || (hw && hw.sections[si].type === 'cloze' ? 'Пропуск ' + (ii + 1) : ''))}</div><div>Відповідь: <b>${esc(d.given) || '—'}</b></div>${d.manual ? '' : d.ok ? '' : `<div>Правильно: <b>${esc(d.correct)}</b></div>`}</div>`; }).join('') +
-    (manualMax ? `<div class="row" style="margin-top:10px"><div><label class="f">Бали за відкриті відповіді (0–${manualMax})</label><input type="number" id="ms" min="0" max="${manualMax}"></div><div><label class="f">Коментар учню</label><input id="mc" value="${esc(r.comment)}"></div><button class="btn" onclick="gradeM(${i})">Зберегти оцінку</button></div>` : '') + '</div>';
+    (manualMax ? `<div class="row" style="margin-top:10px"><div><label class="f">Бали за відкриті відповіді (0–${manualMax})</label><input type="number" id="ms" min="0" max="${manualMax}"></div><div><label class="f">Коментар учню</label><input id="mc" value="${esc(r.comment)}"></div><button class="btn" onclick="gradeM(${i})">Зберегти оцінку</button></div>` : '') + `<p><button class="btn red" onclick="delRes(${i})">Видалити цей результат (учень зможе виконати завдання знову)</button></p></div>`;
   $('rd').scrollIntoView({ behavior: 'smooth' }); }); }
+const delRes = i => confirm('Видалити цей результат? Учень зможе виконати завдання знову.') && run(async () => { const r = T.res[i]; await api('deleteSubmission', { row: r.row, assignmentId: r.assignmentId, student: r.student }); await loadRes(); toast('Результат видалено'); });
+const delAllRes = () => { const id = $('rs').value; if (!id) return toast('Спочатку оберіть конкретне завдання у списку', 1);
+  if (confirm('Видалити ВСІ результати цього завдання? Це не можна скасувати.')) run(async () => { await api('deleteSubmissions', { assignmentId: id }); await loadRes(); toast('Результати видалено'); }); };
 const gradeM = i => run(async () => { await api('gradeManual', { row: T.res[i].row, score: $('ms').value, comment: $('mc').value }); await loadRes(); toast('Оцінку збережено'); });
 
 function csv() {

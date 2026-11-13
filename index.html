@@ -64,6 +64,14 @@ img.pic{max-width:100%;border-radius:10px;margin:10px 0}
 .sum{text-align:center}.legend{margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .fc{background:#fff;border:1px solid var(--line);border-radius:20px;min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:26px;margin:16px 0;cursor:pointer;gap:10px;box-shadow:0 8px 30px rgba(20,83,45,.1)}
 .fcw{font-size:30px;font-weight:700;color:var(--g)}
+.mode{display:flex;flex-direction:column;align-items:flex-start;text-align:left;width:100%;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;margin:9px 0;cursor:pointer;font:inherit;transition:.15s}
+.mode b{font-size:17px}.mode span{color:var(--mut);font-size:14px}.mode:hover{border-color:var(--g);background:var(--gl);transform:translateY(-1px)}
+.spk{border:0;background:var(--gl);border-radius:50%;width:48px;height:48px;font-size:22px;cursor:pointer;transition:.15s}.spk:hover{background:#d4e9da}.spk.big{width:84px;height:84px;font-size:38px}
+.tile{display:block;width:100%;padding:13px 14px;margin:7px 0;border:1.5px solid var(--line);border-radius:12px;background:#fff;font:inherit;cursor:pointer;text-align:center;transition:.15s}
+.tile.left{text-align:left}.tile:hover{border-color:#9fb8a7}.tile.sel{border-color:var(--g);background:var(--gl);font-weight:600}
+.tile.done{background:#e1f4e7;border-color:#8fd0a8;color:var(--ok);opacity:.65;pointer-events:none}
+.tile.ok{background:#e1f4e7;border-color:#8fd0a8;color:var(--ok);font-weight:700}.tile.bad{background:#fde1de;border-color:#e5857d;color:var(--bad);font-weight:700}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:480px){h1{font-size:25px}.herologo{width:140px;height:140px}.brand b{font-size:15px}}
 </style>
 </head>
@@ -313,29 +321,135 @@ function showResult(r, hw) {
     `<button class="btn" onclick="showList()">Back to my homework</button>`);
 }
 
-/* ---------- Flashcards ---------- */
-const F = { id: '', title: '', all: [], cards: [], i: 0, flip: false, known: [], again: [], rev: false };
-function shuf(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+/* ---------- Flashcards: різні режими + озвучка (безкоштовний голос браузера) ---------- */
+const F = { id: '', title: '', all: [], mode: '', queue: [], i: 0, flip: false, rev: false, wrong: [], right: 0, locked: false, opts: [], m: null, accent: store.get('eh_accent') || 'en-GB' };
+const CAN_SPEAK = 'speechSynthesis' in window;
+const shuf = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const fnorm = s => String(s == null ? '' : s).toLowerCase().replace(/[’‘`]/g, "'").replace(/[.!?;,]+$/, '').replace(/\s+/g, ' ').trim();
+const variants = s => String(s == null ? '' : s).split('|').map(x => x.trim()).filter(Boolean);
+const word = c => variants(c.front)[0] || c.front;
+function say(text) {
+  if (!CAN_SPEAK) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(variants(text)[0] || text); u.lang = F.accent; u.rate = 0.85;
+    const vs = speechSynthesis.getVoices();
+    const v = vs.find(v => v.lang.replace('_', '-') === F.accent) || vs.find(v => v.lang.indexOf('en') === 0);
+    if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+const sayCur = () => say(F.queue[F.i].front);
+const sayW = n => say(F.wrong[n].front);
+const sayM = (side, n) => say(F.m.L[n].front);
+function setAccent(v) { F.accent = v; store.set('eh_accent', v); }
+
 async function openDeck(id) {
   app('<div class="card mut">Loading…</div>');
-  try { const d = await api('deck', { name: S.name, group: S.group, deckId: id }); F.id = id; F.title = d.title; F.all = d.cards; startDeck(d.cards, true); }
+  try { const d = await api('deck', { name: S.name, group: S.group, deckId: id }); F.id = id; F.title = d.title; F.all = d.cards; deckMenu(); }
   catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Back</button>`); }
 }
-function startDeck(cards, mix) { F.cards = mix ? shuf(cards) : cards.slice(); F.i = 0; F.flip = false; F.known = []; F.again = []; drawCard(); }
-function drawCard() {
-  if (F.i >= F.cards.length) return deckDone();
-  const c = F.cards[F.i], front = F.rev ? c.back : c.front, back = F.rev ? c.front : c.back;
-  app(`<div class="row"><h2>${esc(F.title)}</h2><span class="tag">${F.i + 1} / ${F.cards.length}</span></div>
-  <div class="fc" onclick="flipCard()"><div class="fcw">${esc(F.flip ? back : front)}</div>${F.flip && c.example ? `<div class="mut">${esc(c.example)}</div>` : ''}${F.flip ? '' : '<div class="mut">Tap the card to reveal the answer</div>'}</div>
-  ${F.flip ? `<div class="row"><button class="btn alt" style="flex:1" onclick="markCard(false)">Still learning</button><button class="btn" style="flex:1" onclick="markCard(true)">I know it</button></div>` : '<button class="btn full" onclick="flipCard()">Show answer</button>'}
-  <p class="mut"><a href="#" onclick="F.rev=!F.rev;F.flip=false;drawCard();return false">Direction: ${F.rev ? 'UA → EN' : 'EN → UA'} (change)</a> · <a href="#" onclick="showList();return false">Exit</a></p>`);
+function deckMenu() {
+  const modes = [
+    ['flip', '🃏 Flashcards', 'Flip the cards and mark what you know'],
+    ['mc', '✅ Multiple choice', 'Choose the correct translation'],
+    ['type', '✍️ Type the word', 'See the translation and write the English word'],
+    ['listen', '🔊 Listen & type', 'Hear the word and spell it'],
+    ['match', '🧩 Matching game', 'Connect English words with translations']
+  ].filter(m => CAN_SPEAK || m[0] !== 'listen');
+  app(`<h2>${esc(F.title)}</h2><div class="mut">${F.all.length} cards · choose how you want to practise</div>` +
+    modes.map(m => `<button class="mode" onclick="startMode('${m[0]}')"><b>${m[1]}</b><span>${m[2]}</span></button>`).join('') +
+    (CAN_SPEAK ? `<p class="mut">Voice: <select style="width:auto;padding:6px 10px" onchange="setAccent(this.value)"><option value="en-GB" ${F.accent === 'en-GB' ? 'selected' : ''}>British 🇬🇧</option><option value="en-US" ${F.accent === 'en-US' ? 'selected' : ''}>American 🇺🇸</option></select></p>` : '') +
+    `<p><button class="btn alt" onclick="showList()">Back to my homework</button></p>`);
 }
-function flipCard() { F.flip = !F.flip; drawCard(); }
-function markCard(k) { (k ? F.known : F.again).push(F.cards[F.i]); F.i++; F.flip = false; drawCard(); }
-function deckDone() {
-  app(`<div class="card sum"><h2>Deck complete 🎉</h2><p>I know it: <b>${F.known.length}</b> · Still learning: <b>${F.again.length}</b></p></div>` +
-    (F.again.length ? '<p><button class="btn full" onclick="startDeck(F.again,true)">Practise “Still learning”</button></p>' : '') +
-    '<p><button class="btn alt full" onclick="startDeck(F.all,true)">Start over</button></p><p><button class="btn alt full" onclick="showList()">Back to my homework</button></p>');
+function startMode(m, cards) {
+  const src = (cards || F.all).slice();
+  F.mode = m; F.queue = shuf(src); F.i = 0; F.wrong = []; F.right = 0; F.flip = false; F.locked = false; F.m = null;
+  if (m === 'match') return matchRound();
+  drawQ();
+}
+function nextQ() { F.i++; F.flip = false; F.locked = false; drawQ(); }
+
+function drawQ() {
+  if (F.i >= F.queue.length) return finishMode();
+  const c = F.queue[F.i];
+  const head = `<div class="row"><h2>${esc(F.title)}</h2><span class="tag">${F.i + 1} / ${F.queue.length}</span></div><div class="prog"><i style="width:${F.i / F.queue.length * 100}%"></i></div>`;
+  const foot = `<p class="mut"><a href="#" onclick="deckMenu();return false">Change mode</a></p>`;
+  const spk = CAN_SPEAK ? '<button class="spk" onclick="event.stopPropagation();sayCur()" title="Listen">🔊</button>' : '';
+  if (F.mode === 'flip') {
+    const front = F.rev ? c.back : c.front, back = F.rev ? c.front : c.back;
+    app(head + `<div class="fc" onclick="F.flip=!F.flip;drawQ()"><div class="fcw">${esc(F.flip ? back : front)}</div>${F.flip && c.example ? `<div class="mut">${esc(c.example)}</div>` : ''}${F.flip ? '' : '<div class="mut">Tap the card to reveal the answer</div>'}${spk}</div>` +
+      (F.flip ? `<div class="row"><button class="btn alt" style="flex:1" onclick="F.wrong.push(F.queue[F.i]);nextQ()">Still learning</button><button class="btn" style="flex:1" onclick="F.right++;nextQ()">I know it</button></div>` : '<button class="btn full" onclick="F.flip=true;drawQ()">Show answer</button>') +
+      `<p class="mut"><a href="#" onclick="F.rev=!F.rev;F.flip=false;drawQ();return false">Direction: ${F.rev ? 'UA → EN' : 'EN → UA'} (change)</a> · <a href="#" onclick="deckMenu();return false">Change mode</a></p>`);
+  } else if (F.mode === 'mc') {
+    const seen = {}; seen[fnorm(c.back)] = 1; const pool = [];
+    shuf(F.all).forEach(x => { const k = fnorm(x.back); if (!seen[k] && pool.length < 3) { seen[k] = 1; pool.push(x.back); } });
+    F.opts = shuf([c.back].concat(pool));
+    app(head + `<div class="card sum"><div class="fcw">${esc(word(c))}</div>${spk}<p class="mut">Choose the correct translation</p></div>` +
+      F.opts.map((o, n) => `<button class="tile left" id="mo${n}" onclick="pickMC(${n})">${esc(o)}</button>`).join('') + `<div id="fb"></div>` + foot);
+  } else {   // type | listen
+    const listen = F.mode === 'listen';
+    app(head + `<div class="card sum">${listen ? '<button class="spk big" onclick="sayCur()" title="Listen again">🔊</button><p class="mut">Listen and type the word you hear</p>' : `<div class="fcw">${esc(c.back)}</div><p class="mut">Type the English word</p>`}</div>
+      <input type="text" id="ti" autocomplete="off" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')checkType()"><div id="fb" style="margin-top:12px"></div>
+      <p><button class="btn full" id="tb" onclick="checkType()">Check</button></p>` + foot);
+    if (listen) setTimeout(() => { if (F.mode === 'listen' && F.queue[F.i] === c) sayCur(); }, 350);
+    $('ti').focus();
+  }
+}
+function pickMC(n) {
+  if (F.locked) return; F.locked = true;
+  const c = F.queue[F.i], ok = F.opts[n] === c.back;
+  F.opts.forEach((o, m) => { const b = $('mo' + m); if (!b) return; if (o === c.back) b.classList.add('ok'); else if (m === n) b.classList.add('bad'); });
+  if (ok) { F.right++; setTimeout(() => { if (F.mode === 'mc' && F.queue[F.i] === c && F.locked) nextQ(); }, 700); }
+  else { F.wrong.push(c); $('fb').innerHTML = '<button class="btn full" style="margin-top:10px" onclick="nextQ()">Next</button>'; }
+}
+function checkType() {
+  if (F.locked) return nextQ();
+  const c = F.queue[F.i], val = $('ti').value.trim();
+  const ok = !!fnorm(val) && variants(c.front).some(v => fnorm(v) === fnorm(val));
+  F.locked = true; ok ? F.right++ : F.wrong.push(c);
+  $('ti').readOnly = true; $('tb').textContent = 'Next';
+  $('fb').innerHTML = (ok ? '<span class="a ok">✓ Correct!</span>' : `<span class="a bad"><s>${esc(val) || '—'}</s></span><span class="a fix">${esc(variants(c.front).join(' / '))}</span>`) +
+    (F.mode === 'listen' ? `<div class="mut" style="margin-top:6px">${esc(c.back)}</div>` : '');
+}
+
+/* matching game: раунди по 6 пар */
+function matchRound() {
+  if (F.i >= F.queue.length) return finishMode();
+  const pairs = F.queue.slice(F.i, F.i + 6);
+  F.m = { pairs, L: shuf(pairs), R: shuf(pairs), done: [], sel: null, flash: null };
+  drawMatch(true);
+}
+function drawMatch(scroll) {
+  const m = F.m, cls = (side, c) => m.done.indexOf(c) >= 0 ? 'done' : (m.flash && m.flash[side] === c) ? 'bad' : (m.sel && m.sel.side === side && m.sel.c === c) ? 'sel' : '';
+  const h = `<div class="row"><h2>${esc(F.title)}</h2><span class="tag">${Math.min(F.i + m.done.length, F.queue.length)} / ${F.queue.length}</span></div><div class="prog"><i style="width:${(F.i + m.done.length) / F.queue.length * 100}%"></i></div>
+    <p class="mut">Tap a word, then tap its translation.</p><div class="cols"><div>${m.L.map((c, n) => `<button class="tile ${cls('L', c)}" onclick="tapM('L',${n})">${esc(word(c))}</button>`).join('')}</div>
+    <div>${m.R.map((c, n) => `<button class="tile ${cls('R', c)}" onclick="tapM('R',${n})">${esc(c.back)}</button>`).join('')}</div></div>
+    <p class="mut"><a href="#" onclick="deckMenu();return false">Change mode</a></p>`;
+  if (scroll) app(h); else $('app').innerHTML = h;
+}
+function tapM(side, n) {
+  const m = F.m; if (m.flash) return;
+  const c = (side === 'L' ? m.L : m.R)[n]; if (m.done.indexOf(c) >= 0) return;
+  if (side === 'L') say(c.front);
+  if (!m.sel || m.sel.side === side) { m.sel = { side, c }; return drawMatch(); }
+  const left = side === 'L' ? c : m.sel.c, right = side === 'R' ? c : m.sel.c; m.sel = null;
+  if (left === right) {
+    m.done.push(left); drawMatch();
+    if (m.done.length === m.pairs.length) setTimeout(() => { if (F.m === m && F.mode === 'match') { F.i += m.pairs.length; matchRound(); } }, 700);
+  } else {
+    if (F.wrong.indexOf(left) < 0) F.wrong.push(left);
+    m.flash = { L: left, R: right }; drawMatch();
+    setTimeout(() => { if (F.m === m) { m.flash = null; drawMatch(); } }, 650);
+  }
+}
+
+function finishMode() {
+  const total = F.queue.length, ok = total - F.wrong.length, pct = total ? Math.round(ok / total * 100) : 0;
+  app(`<div class="card sum"><h2>${F.wrong.length ? 'Well done!' : 'Perfect! 🎉'}</h2><div class="big">${pct}%</div><p>${ok} / ${total} correct</p></div>` +
+    (F.wrong.length ? `<div class="card"><h3>Words to review</h3>${F.wrong.map((c, n) => `<div class="q row"><span><b>${esc(word(c))}</b> — ${esc(c.back)}</span>${CAN_SPEAK ? `<button class="spk" onclick="sayW(${n})">🔊</button>` : ''}</div>`).join('')}</div>
+      <p><button class="btn full" onclick="startMode(F.mode, F.wrong.slice())">Practise these words again</button></p>` : '') +
+    '<p><button class="btn alt full" onclick="deckMenu()">Choose another mode</button></p><p><button class="btn alt full" onclick="showList()">Back to my homework</button></p>');
 }
 
 goHome();
