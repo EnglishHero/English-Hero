@@ -36,7 +36,7 @@ th{background:#eef3ef}tr.c{cursor:pointer}tr.c:hover{background:#f3f8f4}
 <main id="app"></main>
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbypTCriq9XGozFB5SwO_dYvxCtBjvNZE1qWUAXcErA5PFTZoxtDr1nZoaSHTvpvPiH1/exec';   /* той самий URL, що й в index.html */
-const T = { token: null, tab: 'groups', groups: [], hws: [], asg: [], res: [], E: null, hwCache: {} };
+const T = { token: null, tab: 'groups', groups: [], hws: [], asg: [], res: [], E: null, hwCache: {}, decks: [], da: [], D: null };
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const app = h => $('app').innerHTML = h;
@@ -74,20 +74,20 @@ async function start() {
   try { await load(); show(T.tab); } catch (e) { if (T.token) app(`<div class="card err">${esc(e.message)}</div>`); }
 }
 async function load() {
-  [T.groups, T.hws, T.asg] = await Promise.all([api('groups'), api('homeworks'), api('assignments')]);
+  [T.groups, T.hws, T.asg, T.decks, T.da] = await Promise.all([api('groups'), api('homeworks'), api('assignments'), api('decks'), api('deckAssignments')]);
 }
 function show(tab) {
   T.tab = tab;
-  const tabs = { groups: 'Групи й учні', hw: 'Завдання', asg: 'Призначити', res: 'Результати' };
+  const tabs = { groups: 'Групи й учні', hw: 'Завдання', asg: 'Призначити', deck: 'Флешкартки', res: 'Результати' };
   app(`<nav>${Object.keys(tabs).map(k => `<button class="${k === tab ? 'on' : ''}" onclick="show('${k}')">${tabs[k]}</button>`).join('')}</nav><div id="msg"></div><div id="tab"></div>`);
-  ({ groups: viewGroups, hw: viewHw, asg: viewAsg, res: viewRes })[tab]();
+  ({ groups: viewGroups, hw: viewHw, asg: viewAsg, deck: viewDecks, res: viewRes })[tab]();
 }
 const refresh = async () => { await load(); show(T.tab); };
 
 /* ---------- Групи ---------- */
 function viewGroups() {
   $('tab').innerHTML = `<div class="card"><h2>Нова група</h2><div class="row"><input id="gn" placeholder="Назва групи, напр. Teens B1"><button class="btn" onclick="addGroup()">Створити</button></div></div>` +
-    T.groups.map((g, gi) => `<div class="card"><h2>${esc(g.name)} <span class="tag">${g.students.length} учнів</span></h2>
+    T.groups.map((g, gi) => `<div class="card"><div class="row"><h2>${esc(g.name)} <span class="tag">${g.students.length} учнів</span></h2><button class="btn red sm" onclick="delGroup(${gi})">Видалити групу</button></div>
       <div>${g.students.map((s, si) => `<span class="tag" style="margin:2px;display:inline-block;padding:5px 10px">${esc(s)} <a href="#" onclick="rmSt(${gi},${si});return false" style="color:var(--bad);text-decoration:none">✕</a></span>`).join('') || '<span class="mut">Учнів ще немає</span>'}</div>
       <label class="f">Додати учнів (кожен з нового рядка — так, як вони вводитимуть ім’я)</label>
       <textarea id="st${gi}" style="font-family:inherit"></textarea><p><button class="btn sm" onclick="addSt(${gi})">Додати</button></p></div>`).join('');
@@ -130,7 +130,7 @@ function toSec(o) {
 }
 
 function viewHw() {
-  $('tab').innerHTML = `<div class="card"><h2>Мої завдання</h2>${T.hws.map(h => `<div class="row" style="padding:6px 0;border-top:1px solid var(--line)"><div>${esc(h.title)}<div class="mut">${esc(h.created)}</div></div><button class="btn alt sm" onclick="editHw('${h.id}')">Редагувати</button></div>`).join('') || '<div class="mut">Поки порожньо</div>'}
+  $('tab').innerHTML = `<div class="card"><h2>Мої завдання</h2>${T.hws.map(h => `<div class="row" style="padding:6px 0;border-top:1px solid var(--line)"><div>${esc(h.title)}<div class="mut">${esc(h.created)}</div></div><button class="btn alt sm" onclick="editHw('${h.id}')">Редагувати</button><button class="btn red sm" onclick="delHw('${h.id}')">Видалити</button></div>`).join('') || '<div class="mut">Поки порожньо</div>'}
     <p><button class="btn" onclick="T.E={title:'',sections:[newSec()]};drawEd()">+ Нове завдання</button></p></div><div id="ed"></div>
     <div class="card"><h2>Імпорт із Claude (JSON)</h2><textarea id="imp" placeholder='{"title":"...","sections":[...]}'></textarea>
     <p><button class="btn" onclick="impHw()">Імпортувати в редактор</button></p></div>`;
@@ -167,9 +167,41 @@ function viewAsg() {
     <select id="ah">${T.hws.map(h => `<option value="${h.id}">${esc(h.title)}</option>`).join('')}</select>
     <select id="ag">${T.groups.map(g => `<option>${esc(g.name)}</option>`).join('')}</select>
     <input type="date" id="ad"><button class="btn" onclick="assign()">Призначити</button></div></div>
-    <div class="card"><h2>Призначені</h2><div class="scroll"><table><tr><th>Завдання</th><th>Група</th><th>Дедлайн</th></tr>${T.asg.map(a => `<tr><td>${esc(a.title)}</td><td>${esc(a.group)}</td><td>${esc(a.deadline) || '—'}</td></tr>`).join('')}</table></div></div>`;
+    <div class="card"><h2>Призначені</h2><div class="scroll"><table><tr><th>Завдання</th><th>Група</th><th>Дедлайн</th><th></th></tr>${T.asg.map(a => `<tr><td>${esc(a.title)}</td><td>${esc(a.group)}</td><td>${esc(a.deadline) || '—'}</td><td><button class="btn red sm" onclick="delAsg('${a.id}')">Видалити</button></td></tr>`).join('')}</table></div></div>`;
 }
 const assign = () => run(async () => { await api('assign', { hwId: $('ah').value, group: $('ag').value, deadline: $('ad').value }); await refresh(); toast('Призначено'); });
+
+/* ---------- Видалення ---------- */
+const delHw = id => confirm('Видалити завдання разом з його призначеннями? Уже надіслані роботи в таблиці залишаться.') && run(async () => { await api('deleteHomework', { id }); await refresh(); toast('Видалено'); });
+const delAsg = id => confirm('Прибрати це призначення? Учні більше не побачать завдання. Надіслані роботи в таблиці залишаться.') && run(async () => { await api('deleteAssignment', { id }); await refresh(); toast('Видалено'); });
+const delGroup = gi => confirm('Видалити групу, її учнів і призначення?') && run(async () => { await api('deleteGroup', { name: T.groups[gi].name }); await refresh(); });
+
+/* ---------- Флешкартки ---------- */
+function viewDecks() {
+  $('tab').innerHTML = `<div class="card"><h2>Набори флешкарток</h2>${T.decks.map(d => `<div class="row" style="padding:6px 0;border-top:1px solid var(--line)"><div>${esc(d.title)} <span class="tag">${d.count} карток</span></div><button class="btn alt sm" onclick="editDeck('${d.id}')">Редагувати</button><button class="btn red sm" onclick="delDeck('${d.id}')">Видалити</button></div>`).join('') || '<div class="mut">Поки порожньо</div>'}
+    <p><button class="btn" onclick="T.D={title:'',lines:''};drawDeckEd()">+ Новий набір</button></p></div><div id="ded"></div>
+    <div class="card"><h2>Призначити набір групі</h2><div class="row"><select id="dsel">${T.decks.map(d => `<option value="${d.id}">${esc(d.title)}</option>`).join('')}</select>
+    <select id="dgrp">${T.groups.map(g => `<option>${esc(g.name)}</option>`).join('')}</select><button class="btn" onclick="assignDk()">Призначити</button></div></div>
+    <div class="card"><h2>Призначені набори</h2><div class="scroll"><table><tr><th>Набір</th><th>Група</th><th></th></tr>${T.da.map(a => `<tr><td>${esc(a.title)}</td><td>${esc(a.group)}</td><td><button class="btn red sm" onclick="delDa('${a.id}')">Видалити</button></td></tr>`).join('')}</table></div></div>`;
+  if (T.D) drawDeckEd();
+}
+function drawDeckEd() {
+  if (!T.D || !$('ded')) return;
+  $('ded').innerHTML = `<div class="card"><h2>Редактор набору</h2><label class="f">Назва набору</label><input value="${esc(T.D.title)}" oninput="T.D.title=this.value">
+    <label class="f">Картки — по одній у рядку <span class="mut">(англійське слово :: переклад :: приклад речення; приклад необов’язковий)</span></label>
+    <textarea style="min-height:200px" placeholder="isolate :: ізолювати :: They isolated the patient." oninput="T.D.lines=this.value">${esc(T.D.lines)}</textarea>
+    <p><button class="btn" onclick="saveDk()">Зберегти набір</button></p></div>`;
+}
+const editDeck = id => run(async () => { const d = await api('getDeck', { id });
+  T.D = { id: d.id, title: d.title, lines: d.cards.map(c => [c.front, c.back, c.example || ''].join(' :: ').replace(/( :: )+$/, '')).join('\n') }; drawDeckEd(); });
+const saveDk = () => run(async () => {
+  const D = T.D; if (!D.title.trim()) throw new Error('Введіть назву набору');
+  const cards = D.lines.split('\n').map(l => l.trim()).filter(Boolean).map(l => { const p = l.split('::').map(x => x.trim()); return { front: p[0], back: p[1] || '', example: p[2] || '' }; });
+  await api('saveDeck', { deck: { id: D.id, title: D.title.trim(), cards } }); T.D = null; await refresh(); toast('Набір збережено');
+});
+const assignDk = () => run(async () => { await api('assignDeck', { deckId: $('dsel').value, group: $('dgrp').value }); await refresh(); toast('Призначено'); });
+const delDeck = id => confirm('Видалити набір разом з призначеннями?') && run(async () => { await api('deleteDeck', { id }); await refresh(); });
+const delDa = id => run(async () => { await api('deleteDeckAssign', { id }); await refresh(); });
 
 /* ---------- Результати ---------- */
 function viewRes() {

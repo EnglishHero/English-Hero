@@ -38,6 +38,8 @@ label.f{display:block;font-weight:600;margin:12px 0 6px}
 .res.ok{border-left:4px solid var(--ok)}.res.no{border-left:4px solid var(--bad)}.res.man{border-left:4px solid #c9a227}
 img.pic{max-width:100%;border-radius:8px;margin:8px 0}
 .err{color:var(--bad);margin-top:10px}
+.fc{background:#fff;border:1px solid var(--line);border-radius:16px;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;margin:14px 0;cursor:pointer;gap:10px}
+.fcw{font-size:28px;font-weight:700;color:var(--g)}
 .sticky{position:sticky;bottom:0;background:var(--bg);padding:12px 0}
 </style>
 </head>
@@ -88,7 +90,7 @@ async function studentLogin(msg) {
   <div class="err" id="e">${esc(msg)}</div>
   <p><button class="btn full" id="go" onclick="doLogin()">Увійти</button></p></div>`);
   try {
-    const gs = await api('groups'); if (!$('g')) return;
+    const gs = await api('publicGroups'); if (!$('g')) return;
     $('g').innerHTML = '<option value="">— оберіть групу —</option>' + gs.map(g => `<option ${g === saved.group ? 'selected' : ''}>${esc(g)}</option>`).join('');
   } catch (e) { if ($('e')) $('e').textContent = e.message; }
 }
@@ -96,7 +98,7 @@ async function doLogin() {
   $('e').textContent = ''; $('go').disabled = true;
   try {
     const d = await api('login', { name: $('n').value, group: $('g').value });
-    S.name = d.name; S.group = d.group; S.list = d.assignments;
+    S.name = d.name; S.group = d.group; S.list = d.assignments; S.decks = d.decks || [];
     store.set('eh_student', { name: S.name, group: S.group });
     showList();
   } catch (e) { $('e').textContent = e.message; $('go').disabled = false; }
@@ -107,13 +109,14 @@ async function showList() {
   if (!S.name) return studentLogin();
   $('who').textContent = S.name + ' · ' + S.group;
   const d = await api('login', { name: S.name, group: S.group }).catch(e => null);
-  if (d) S.list = d.assignments;
+  if (d) { S.list = d.assignments; S.decks = d.decks || []; }
   app(`<h2>Мої домашні завдання</h2>` + (S.list.length ? S.list.map(a => `<div class="card row">
     <div><h3>${esc(a.title)}</h3><div class="mut">${a.deadline ? 'Дедлайн: ' + esc(a.deadline) : 'Без дедлайну'}</div></div>
     <div>${a.done
       ? `<span class="tag ${a.pending ? 'warn' : ''}">${a.pending ? 'Очікує перевірки' : a.percent + '%'}</span> <button class="btn alt" onclick="openResult('${a.id}')">Результат</button>`
       : `<button class="btn" onclick="openTask('${a.id}')">Виконати</button>`}</div></div>`).join('')
     : '<div class="card mut">Для вашої групи ще немає завдань.</div>') +
+    ((S.decks || []).length ? '<h2 style="margin-top:24px">Флешкартки</h2>' + S.decks.map(d => `<div class="card row"><div><h3>${esc(d.title)}</h3><div class="mut">${d.count} карток</div></div><button class="btn" onclick="openDeck('${d.id}')">Вчити</button></div>`).join('') : '') +
     `<p><button class="btn alt" onclick="logout()">Вийти</button></p>`);
 }
 function logout() { S.name = ''; S.group = ''; store.del('eh_student'); goHome(); }
@@ -213,6 +216,31 @@ function showResult(r, hw) {
         ${d.manual ? '<div class="mut">Перевіряє викладач</div>' : d.ok ? '' : `<div>Правильно: <b>${esc(d.correct)}</b></div>`}</div>`;
     }).join('') + '</div>').join('') : '') +
     `<button class="btn" onclick="showList()">До списку завдань</button>`);
+}
+
+/* ---------- Флешкартки ---------- */
+const F = { id: '', title: '', all: [], cards: [], i: 0, flip: false, known: [], again: [], rev: false };
+function shuf(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+async function openDeck(id) {
+  app('<div class="card mut">Завантаження…</div>');
+  try { const d = await api('deck', { name: S.name, group: S.group, deckId: id }); F.id = id; F.title = d.title; F.all = d.cards; startDeck(d.cards, true); }
+  catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Назад</button>`); }
+}
+function startDeck(cards, mix) { F.cards = mix ? shuf(cards) : cards.slice(); F.i = 0; F.flip = false; F.known = []; F.again = []; drawCard(); }
+function drawCard() {
+  if (F.i >= F.cards.length) return deckDone();
+  const c = F.cards[F.i], front = F.rev ? c.back : c.front, back = F.rev ? c.front : c.back;
+  app(`<div class="row"><h2>${esc(F.title)}</h2><span class="tag">${F.i + 1} / ${F.cards.length}</span></div>
+  <div class="fc" onclick="flipCard()"><div class="fcw">${esc(F.flip ? back : front)}</div>${F.flip && c.example ? `<div class="mut">${esc(c.example)}</div>` : ''}${F.flip ? '' : '<div class="mut">Натисніть, щоб побачити відповідь</div>'}</div>
+  ${F.flip ? `<div class="row"><button class="btn alt" style="flex:1" onclick="markCard(false)">Ще вчу</button><button class="btn" style="flex:1" onclick="markCard(true)">Знаю</button></div>` : '<button class="btn full" onclick="flipCard()">Показати відповідь</button>'}
+  <p class="mut"><a href="#" onclick="F.rev=!F.rev;F.flip=false;drawCard();return false">Напрямок: ${F.rev ? 'UA → EN' : 'EN → UA'} (змінити)</a> · <a href="#" onclick="showList();return false">Вийти</a></p>`);
+}
+function flipCard() { F.flip = !F.flip; drawCard(); }
+function markCard(k) { (k ? F.known : F.again).push(F.cards[F.i]); F.i++; F.flip = false; drawCard(); }
+function deckDone() {
+  app(`<div class="card" style="text-align:center"><h2>Набір пройдено 🎉</h2><p>Знаю: <b>${F.known.length}</b> · Ще вчу: <b>${F.again.length}</b></p></div>` +
+    (F.again.length ? '<p><button class="btn full" onclick="startDeck(F.again,true)">Повторити «Ще вчу»</button></p>' : '') +
+    '<p><button class="btn alt full" onclick="startDeck(F.all,true)">Почати спочатку</button></p><p><button class="btn alt full" onclick="showList()">До списку</button></p>');
 }
 
 /* старт */
