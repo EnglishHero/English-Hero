@@ -40,6 +40,8 @@ img.pic{max-width:100%;border-radius:8px;margin:8px 0}
 .err{color:var(--bad);margin-top:10px}
 .fc{background:#fff;border:1px solid var(--line);border-radius:16px;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;margin:14px 0;cursor:pointer;gap:10px}
 .fcw{font-size:28px;font-weight:700;color:var(--g)}
+input[type=text].gap{display:inline-block;width:150px;max-width:100%;padding:3px 8px;margin:0 3px;border:0;border-bottom:2px solid var(--g);border-radius:0;background:#eef6f0}
+.cloze{white-space:pre-wrap;line-height:2.3;margin:10px 0}
 .sticky{position:sticky;bottom:0;background:var(--bg);padding:12px 0}
 </style>
 </head>
@@ -55,6 +57,17 @@ const TEACHER_PAGE = 'teacher.html';
 const S = { name: '', group: '', list: [], task: null, ans: {}, ord: {} };
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* дозволене форматування: <b>жирний</b>, <i>курсив</i>, <u>підкреслений</u>; усе інше екранується */
+function rich(s) {
+  const st = [];
+  const o = esc(s).replace(/&lt;(\/?)(b|i|u)&gt;/gi, (m, c, t) => {
+    t = t.toLowerCase();
+    if (!c) { st.push(t); return '<' + t + '>'; }
+    const j = st.lastIndexOf(t); if (j < 0) return '';
+    st.splice(j, 1); return '</' + t + '>';
+  });
+  return o + st.reverse().map(t => '</' + t + '>').join('');
+}
 const app = h => { $('app').innerHTML = h; window.scrollTo(0, 0); };
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
@@ -145,13 +158,20 @@ function renderTask() {
   const hw = S.task.hw;
   app(`<h2>${esc(hw.title)}</h2><div class="mut">${S.task.deadline ? 'Дедлайн: ' + esc(S.task.deadline) : ''}</div>` +
     hw.sections.map((s, si) => `<div class="card"><h3>${esc(s.title || 'Завдання ' + (si + 1))}</h3>
-      ${s.instructions ? `<div class="mut">${esc(s.instructions)}</div>` : ''}
-      ${s.text ? `<div class="txt">${esc(s.text)}</div>` : ''}${media(s.imageUrl, 'img')}${media(s.audioUrl, 'audio')}
-      ${s.items.map((it, i) => itemHTML(s, si, it, i)).join('')}</div>`).join('') +
+      ${s.instructions ? `<div class="mut">${rich(s.instructions)}</div>` : ''}
+      ${s.type === 'cloze' ? '' : (s.text ? `<div class="txt">${rich(s.text)}</div>` : '')}${media(s.imageUrl, 'img')}${media(s.audioUrl, 'audio')}
+      ${s.type === 'cloze' ? clozeHTML(s, si) : s.items.map((it, i) => itemHTML(s, si, it, i)).join('')}</div>`).join('') +
     `<div class="sticky"><div class="err" id="e"></div><button class="btn full" id="sb" onclick="submitTask()">Надіслати роботу</button></div>`);
   hw.sections.forEach((s, si) => { if (s.type === 'order') s.items.forEach((it, i) => drawOrd(si + '.' + i, si, i)); });
 }
 
+function clozeHTML(s, si) {
+  return '<div class="cloze">' + rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((part, n) => {
+    if (n % 2 === 0) return part;
+    const k = si + '.' + part;
+    return `<input type="text" class="gap" placeholder="${Number(part) + 1}" value="${esc(S.ans[k] || '')}" oninput="setAns('${k}',this.value)" autocomplete="off" autocapitalize="off" spellcheck="false">`;
+  }).join('') + '</div>';
+}
 function itemHTML(s, si, it, i) {
   const k = si + '.' + i, v = S.ans[k] || '';
   let body;
@@ -163,7 +183,7 @@ function itemHTML(s, si, it, i) {
   else if (s.type === 'open' || s.type === 'translation' || s.type === 'transform')
     body = `<textarea oninput="setAns('${k}',this.value)">${esc(v)}</textarea>`;
   else body = `<input type="text" value="${esc(v)}" oninput="setAns('${k}',this.value)" autocomplete="off" autocapitalize="off" spellcheck="false">`;
-  return `<div class="q"><div style="white-space:pre-wrap;margin-bottom:6px"><b>${i + 1}.</b> ${esc(it.q)}</div>${body}</div>`;
+  return `<div class="q"><div style="white-space:pre-wrap;margin-bottom:6px"><b>${i + 1}.</b> ${rich(it.q)}</div>${body}</div>`;
 }
 
 function drawOrd(k, si, i) {
@@ -211,7 +231,7 @@ function showResult(r, hw) {
     (hw ? hw.sections.map((s, si) => `<div class="card"><h3>${esc(s.title || 'Завдання ' + (si + 1))}</h3>` + s.items.map((it, i) => {
       const d = by[si + '.' + i]; if (!d) return '';
       const cls = d.manual ? 'man' : d.ok ? 'ok' : 'no';
-      return `<div class="q res ${cls}" style="padding-left:12px"><div><b>${i + 1}.</b> ${esc(it.q)}</div>
+      return `<div class="q res ${cls}" style="padding-left:12px"><div><b>${i + 1}.</b> ${rich(it.q || ('Пропуск ' + (i + 1)))}</div>
         <div>Ваша відповідь: <b>${esc(d.given) || '—'}</b></div>
         ${d.manual ? '<div class="mut">Перевіряє викладач</div>' : d.ok ? '' : `<div>Правильно: <b>${esc(d.correct)}</b></div>`}</div>`;
     }).join('') + '</div>').join('') : '') +
