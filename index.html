@@ -1,63 +1,86 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ENGLISH HERO</title>
+<link id="fav" rel="icon" href="data:,">
 <style>
-:root{--g:#14532d;--g2:#1c6b3c;--bg:#f6f8f6;--line:#dfe6e0;--tx:#1b2a21;--mut:#66756b;--ok:#1a7f43;--bad:#b3261e;color-scheme:light}
+:root{--g:#14532d;--g2:#1c6b3c;--gl:#eaf4ed;--bg:#f2f6f3;--line:#dde6df;--tx:#1b2a21;--mut:#66756b;--ok:#14703a;--bad:#c0261b;color-scheme:light}
 *{box-sizing:border-box}
-body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx)}
-header{background:var(--g);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
-header b{letter-spacing:.12em;font-size:18px;cursor:pointer}
-header span{font-size:14px;opacity:.9}
-main{max-width:760px;margin:0 auto;padding:20px 16px 60px}
-.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px}
-h1{font-size:26px;margin:.2em 0}h2{font-size:20px;margin:.2em 0 .6em}h3{font-size:17px;margin:.2em 0}
+body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);-webkit-text-size-adjust:100%}
+header{background:linear-gradient(90deg,#0e3f24,#14532d 60%,#1c6b3c);color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(14,63,36,.25)}
+.brand{display:flex;align-items:center;gap:12px;cursor:pointer}
+.brand img{width:44px;height:44px;border-radius:50%;background:#fff;border:2px solid #fff}
+.brand b{letter-spacing:.14em;font-size:18px}
+.pill{background:rgba(255,255,255,.16);padding:5px 12px;border-radius:20px;font-size:14px;max-width:55vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill:empty{display:none}
+main{max-width:780px;margin:0 auto;padding:22px 16px 70px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(20,83,45,.06)}
+h1{font-size:30px;line-height:1.2;margin:.3em 0}h2{font-size:22px;margin:.2em 0 .7em}h3{font-size:18px;margin:.2em 0 .4em}
 .mut{color:var(--mut);font-size:14px}
-.btn{display:inline-block;background:var(--g);color:#fff;border:0;border-radius:10px;padding:12px 20px;font-size:16px;cursor:pointer;text-decoration:none}
-.btn:hover{background:var(--g2)}.btn.alt{background:#fff;color:var(--g);border:1px solid var(--g)}.btn:disabled{opacity:.5}
+.btn{display:inline-block;background:var(--g);color:#fff;border:0;border-radius:12px;padding:13px 24px;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;transition:.15s;box-shadow:0 2px 8px rgba(20,83,45,.25)}
+.btn:hover{background:var(--g2);transform:translateY(-1px)}.btn:disabled{opacity:.5;transform:none}
+.btn.alt{background:#fff;color:var(--g);border:1.5px solid var(--g);box-shadow:none}.btn.alt:hover{background:var(--gl)}
 .btn.full{width:100%}
-input[type=text],select,textarea{width:100%;padding:11px 12px;border:1px solid #c5d0c8;border-radius:10px;font:inherit;background:#fff}
-textarea{min-height:90px}
-label.f{display:block;font-weight:600;margin:12px 0 6px}
-.hero{text-align:center;padding:50px 10px}
-.hero .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px}
-.row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.tag{font-size:13px;padding:3px 10px;border-radius:20px;background:#e8f1ea;color:var(--g)}
-.tag.warn{background:#fff3d6;color:#7a5200}.tag.bad{background:#fde7e5;color:var(--bad)}
-.q{padding:12px 0;border-top:1px solid var(--line)}.q:first-of-type{border-top:0}
-.opt{display:block;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin:6px 0;cursor:pointer}
-.opt:has(input:checked){border-color:var(--g);background:#eef6f0}
-.opt input{margin-right:8px}
-.txt{background:#f3f6f3;border-left:4px solid var(--g);padding:12px 14px;border-radius:6px;white-space:pre-wrap;margin:10px 0}
-.chip{display:inline-block;padding:8px 12px;margin:4px;border:1px solid var(--g);border-radius:8px;background:#fff;cursor:pointer}
-.chip.used{opacity:.3;pointer-events:none}.chosen{min-height:46px;border:1px dashed #9fb3a5;border-radius:10px;padding:4px;margin-bottom:6px}
-.chosen .chip{background:#eef6f0}
-.big{font-size:44px;font-weight:700;color:var(--g)}
-.res.ok{border-left:4px solid var(--ok)}.res.no{border-left:4px solid var(--bad)}.res.man{border-left:4px solid #c9a227}
-img.pic{max-width:100%;border-radius:8px;margin:8px 0}
-.err{color:var(--bad);margin-top:10px}
-.fc{background:#fff;border:1px solid var(--line);border-radius:16px;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;margin:14px 0;cursor:pointer;gap:10px}
-.fcw{font-size:28px;font-weight:700;color:var(--g)}
-input[type=text].gap{display:inline-block;width:150px;max-width:100%;padding:3px 8px;margin:0 3px;border:0;border-bottom:2px solid var(--g);border-radius:0;background:#eef6f0}
-.cloze{white-space:pre-wrap;line-height:2.3;margin:10px 0}
-.sticky{position:sticky;bottom:0;background:var(--bg);padding:12px 0}
+input[type=text],select,textarea{width:100%;padding:12px 14px;border:1.5px solid #c5d0c8;border-radius:12px;font:inherit;background:#fff;transition:.15s}
+input[type=text]:focus,select:focus,textarea:focus{outline:0;border-color:var(--g2);box-shadow:0 0 0 3px rgba(28,107,60,.15)}
+textarea{min-height:100px}
+label.f{display:block;font-weight:600;margin:14px 0 6px}
+.hero{text-align:center;padding:40px 16px 48px;background:linear-gradient(180deg,#fff,var(--gl));border:1px solid var(--line);border-radius:24px;box-shadow:0 10px 40px rgba(20,83,45,.1)}
+.herologo{width:180px;height:180px;border-radius:50%;box-shadow:0 8px 30px rgba(20,83,45,.2)}
+.hero p{color:var(--mut);margin:0}
+.hero .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.tag{font-size:13px;font-weight:600;padding:4px 12px;border-radius:20px;background:var(--gl);color:var(--g)}
+.tag.warn{background:#fff3d6;color:#7a5200}
+.q{padding:14px 0;border-top:1px solid var(--line)}.q:first-of-type{border-top:0}
+.qt{white-space:pre-wrap;margin-bottom:8px}
+.opt{display:block;padding:11px 14px;border:1.5px solid var(--line);border-radius:12px;margin:7px 0;cursor:pointer;transition:.15s}
+.opt:hover{border-color:#9fb8a7}.opt:has(input:checked){border-color:var(--g);background:var(--gl)}
+.opt input{margin-right:10px}
+.txt{background:#f4f8f5;border-left:4px solid var(--g);padding:14px 16px;border-radius:8px;white-space:pre-wrap;margin:12px 0}
+.chip{display:inline-block;padding:9px 14px;margin:4px;border:1.5px solid var(--g);border-radius:10px;background:#fff;cursor:pointer;font-weight:500}
+.chip.used{opacity:.3;pointer-events:none}.chosen{min-height:50px;border:2px dashed #9fb3a5;border-radius:12px;padding:4px;margin-bottom:8px}.chosen .chip{background:var(--gl)}
+input[type=text].gap{display:inline-block;width:150px;max-width:100%;padding:3px 8px;margin:0 3px;border:0;border-bottom:2px solid var(--g);border-radius:0;background:var(--gl);box-shadow:none}
+.cloze{white-space:pre-wrap;line-height:2.4;margin:10px 0}
+.big{font-size:56px;font-weight:800;color:var(--g);line-height:1.1}
+img.pic{max-width:100%;border-radius:10px;margin:10px 0}
+.err{color:var(--bad);font-weight:600;margin-top:10px}
+.bar{position:sticky;bottom:0;background:linear-gradient(0deg,var(--bg) 70%,transparent);padding:14px 0 10px}
+.prog{height:8px;background:#dbe5de;border-radius:8px;overflow:hidden;margin:6px 0 12px}.prog i{display:block;height:100%;width:0;background:var(--g2);transition:.2s}
+/* review */
+.a{display:inline-block;padding:1px 9px;border-radius:7px;font-weight:700;margin:0 2px}
+.a.ok{background:#e1f4e7;color:var(--ok);border:1.5px solid #8fd0a8}
+.a.bad{background:#fde1de;color:var(--bad);border:1.5px solid #ee9a93;min-width:44px}.a.bad s{text-decoration-thickness:2px}
+.a.fix{background:var(--ok);color:#fff;border:1.5px solid var(--ok)}
+.a.man{background:#fff3d6;color:#7a5200;border:1.5px solid #ecd08a}
+.ro{padding:9px 14px;border:1.5px solid var(--line);border-radius:12px;margin:6px 0}
+.ro.ok{background:#e1f4e7;border-color:#8fd0a8;color:var(--ok);font-weight:700}
+.ro.bad{background:#fde1de;border-color:#e5857d;color:var(--bad);font-weight:700}
+.ro.fix{background:#fff;border:2px solid var(--ok);color:var(--ok);font-weight:700}
+.ro.man{background:#fff3d6;border-color:#ecd08a}
+.ansrow{margin-top:6px}
+.sum{text-align:center}.legend{margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.fc{background:#fff;border:1px solid var(--line);border-radius:20px;min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:26px;margin:16px 0;cursor:pointer;gap:10px;box-shadow:0 8px 30px rgba(20,83,45,.1)}
+.fcw{font-size:30px;font-weight:700;color:var(--g)}
+@media(max-width:480px){h1{font-size:25px}.herologo{width:140px;height:140px}.brand b{font-size:15px}}
 </style>
 </head>
 <body>
-<header><b onclick="goHome()">ENGLISH HERO</b><span id="who"></span></header>
+<header><div class="brand" onclick="goHome()"><img id="hl" alt=""><b>ENGLISH HERO</b></div><span id="who" class="pill"></span></header>
 <main id="app"></main>
 
 <script>
-/* ВСТАВТЕ СЮДИ URL веб-застосунку Google Apps Script (закінчується на /exec) */
 const API = 'https://script.google.com/macros/s/AKfycbypTCriq9XGozFB5SwO_dYvxCtBjvNZE1qWUAXcErA5PFTZoxtDr1nZoaSHTvpvPiH1/exec';
 const TEACHER_PAGE = 'teacher.html';
-
-const S = { name: '', group: '', list: [], task: null, ans: {}, ord: {} };
+const LOGO = 'data:image/png;base64,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';
 const $ = id => document.getElementById(id);
+$('hl').src = LOGO; $('fav').href = LOGO;
+
+const S = { name: '', group: '', list: [], decks: [], task: null, ans: {}, ord: {}, total: 0 };
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-/* дозволене форматування: <b>жирний</b>, <i>курсив</i>, <u>підкреслений</u>; усе інше екранується */
+/* <b>, <i>, <u> дозволені, усе інше екранується */
 function rich(s) {
   const st = [];
   const o = esc(s).replace(/&lt;(\/?)(b|i|u)&gt;/gi, (m, c, t) => {
@@ -75,36 +98,52 @@ const store = {
   del(k) { try { localStorage.removeItem(k); } catch (e) {} }
 };
 
+/* повідомлення сервера (українською) -> англійською для учня */
+const MSG = [
+  ['Введіть ім', 'Please enter your name and select your group.'],
+  ['Вас немає у списку', 'You are not on the list for this group. Please ask your teacher.'],
+  ['Завдання недоступне', 'This homework is not available.'],
+  ['Доступ заборонено', 'Access denied.'],
+  ['вже надіслали', 'You have already submitted this homework.'],
+  ['вже надіслано', 'This homework has already been submitted.'],
+  ['Спочатку надішліть', 'Please submit the homework first.'],
+  ['Результату ще немає', 'No result yet.'],
+  ['Набір', 'This flashcard set is not available.'],
+  ['Сесія', 'Please reload the page and try again.']
+];
+const tr = m => { m = String(m || ''); const f = MSG.find(x => m.indexOf(x[0]) >= 0); if (f) return f[1];
+  return /[А-Яа-яІіЇїЄєҐґ]/.test(m) ? 'Something went wrong. Please try again or ask your teacher.' : m; };
+
 async function api(action, data) {
-  if (API.indexOf('http') !== 0) throw new Error('Сайт ще не підключений до бази: вставте URL Apps Script у файл index.html.');
+  if (API.indexOf('http') !== 0) throw new Error('The site is not connected to the database yet.');
   let r;
   try { r = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ action }, data || {})) }); }
-  catch (e) { throw new Error('Немає зв’язку з сервером. Перевірте інтернет і спробуйте ще раз.'); }
+  catch (e) { throw new Error('No connection to the server. Check your internet and try again.'); }
   const j = await r.json();
-  if (!j.ok) throw new Error(j.error);
+  if (!j.ok) throw new Error(tr(j.error));
   return j.data;
 }
 
-/* ---------- Головна ---------- */
+/* ---------- Home ---------- */
 function goHome() {
   S.task = null; $('who').textContent = '';
-  app(`<div class="hero"><h1>Welcome to English Hero!</h1>
-  <p class="mut">Онлайн-домашні завдання з англійської</p>
+  app(`<section class="hero"><img class="herologo" src="${LOGO}" alt="English Hero"><h1>Welcome to English Hero!</h1>
+  <p>Your online homework platform</p>
   <div class="btns"><button class="btn" onclick="studentLogin()">Student Login</button>
-  <a class="btn alt" href="${TEACHER_PAGE}">Teacher Login</a></div></div>`);
+  <a class="btn alt" href="${TEACHER_PAGE}">Teacher Login</a></div></section>`);
 }
 
-/* ---------- Вхід учня ---------- */
+/* ---------- Student login ---------- */
 async function studentLogin(msg) {
   const saved = store.get('eh_student') || {};
-  app(`<div class="card"><h2>Вхід для учня</h2>
-  <label class="f">Ваше ім’я та прізвище</label><input type="text" id="n" value="${esc(saved.name)}" autocomplete="name">
-  <label class="f">Група</label><select id="g"><option>Завантаження…</option></select>
+  app(`<div class="card"><h2>Student Login</h2>
+  <label class="f">Your first and last name</label><input type="text" id="n" value="${esc(saved.name)}" autocomplete="name">
+  <label class="f">Group</label><select id="g"><option>Loading…</option></select>
   <div class="err" id="e">${esc(msg)}</div>
-  <p><button class="btn full" id="go" onclick="doLogin()">Увійти</button></p></div>`);
+  <p><button class="btn full" id="go" onclick="doLogin()">Log in</button></p></div>`);
   try {
     const gs = await api('publicGroups'); if (!$('g')) return;
-    $('g').innerHTML = '<option value="">— оберіть групу —</option>' + gs.map(g => `<option ${g === saved.group ? 'selected' : ''}>${esc(g)}</option>`).join('');
+    $('g').innerHTML = '<option value="">— select your group —</option>' + gs.map(g => `<option ${g === saved.group ? 'selected' : ''}>${esc(g)}</option>`).join('');
   } catch (e) { if ($('e')) $('e').textContent = e.message; }
 }
 async function doLogin() {
@@ -117,35 +156,40 @@ async function doLogin() {
   } catch (e) { $('e').textContent = e.message; $('go').disabled = false; }
 }
 
-/* ---------- Список завдань ---------- */
+/* ---------- Homework list ---------- */
 async function showList() {
   if (!S.name) return studentLogin();
   $('who').textContent = S.name + ' · ' + S.group;
   const d = await api('login', { name: S.name, group: S.group }).catch(e => null);
   if (d) { S.list = d.assignments; S.decks = d.decks || []; }
-  app(`<h2>Мої домашні завдання</h2>` + (S.list.length ? S.list.map(a => `<div class="card row">
-    <div><h3>${esc(a.title)}</h3><div class="mut">${a.deadline ? 'Дедлайн: ' + esc(a.deadline) : 'Без дедлайну'}</div></div>
+  app(`<h2>My homework</h2>` + (S.list.length ? S.list.map(a => `<div class="card row">
+    <div><h3>${esc(a.title)}</h3><div class="mut">${a.deadline ? 'Deadline: ' + esc(a.deadline) : 'No deadline'}</div></div>
     <div>${a.done
-      ? `<span class="tag ${a.pending ? 'warn' : ''}">${a.pending ? 'Очікує перевірки' : a.percent + '%'}</span> <button class="btn alt" onclick="openResult('${a.id}')">Результат</button>`
-      : `<button class="btn" onclick="openTask('${a.id}')">Виконати</button>`}</div></div>`).join('')
-    : '<div class="card mut">Для вашої групи ще немає завдань.</div>') +
-    ((S.decks || []).length ? '<h2 style="margin-top:24px">Флешкартки</h2>' + S.decks.map(d => `<div class="card row"><div><h3>${esc(d.title)}</h3><div class="mut">${d.count} карток</div></div><button class="btn" onclick="openDeck('${d.id}')">Вчити</button></div>`).join('') : '') +
-    `<p><button class="btn alt" onclick="logout()">Вийти</button></p>`);
+      ? `<span class="tag ${a.pending ? 'warn' : ''}">${a.pending ? 'Pending teacher check' : a.percent + '%'}</span> <button class="btn alt" onclick="openResult('${a.id}')">Result</button>`
+      : `<button class="btn" onclick="openTask('${a.id}')">Start</button>`}</div></div>`).join('')
+    : '<div class="card mut">There is no homework for your group yet.</div>') +
+    ((S.decks || []).length ? '<h2 style="margin-top:28px">Flashcards</h2>' + S.decks.map(d => `<div class="card row"><div><h3>${esc(d.title)}</h3><div class="mut">${d.count} cards</div></div><button class="btn" onclick="openDeck('${d.id}')">Study</button></div>`).join('') : '') +
+    `<p><button class="btn alt" onclick="logout()">Log out</button></p>`);
 }
 function logout() { S.name = ''; S.group = ''; store.del('eh_student'); goHome(); }
 
-/* ---------- Виконання завдання ---------- */
+/* ---------- Doing the homework ---------- */
 async function openTask(id) {
-  app('<div class="card mut">Завантаження…</div>');
+  app('<div class="card mut">Loading…</div>');
   try {
     const d = await api('task', { name: S.name, group: S.group, assignmentId: id });
     S.task = d; const dr = store.get('eh_draft_' + S.name + id) || {};
     S.ans = dr.ans || {}; S.ord = dr.ord || {};
     renderTask();
-  } catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Назад</button>`); }
+  } catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Back</button>`); }
 }
 const saveDraft = () => store.set('eh_draft_' + S.name + S.task.assignmentId, { ans: S.ans, ord: S.ord });
-function setAns(k, v) { S.ans[k] = v; saveDraft(); }
+function setAns(k, v) { S.ans[k] = v; saveDraft(); prog(); }
+function prog() {
+  if (!$('pg')) return;
+  const n = Object.keys(S.ans).filter(k => String(S.ans[k]).trim()).length;
+  $('pg').textContent = n + ' / ' + S.total; $('pb').style.width = (S.total ? Math.min(100, n / S.total * 100) : 0) + '%';
+}
 
 function media(url, kind) {
   if (!url) return '';
@@ -153,16 +197,18 @@ function media(url, kind) {
   if (kind === 'audio') return m ? `<iframe src="https://drive.google.com/file/d/${m[1]}/preview" style="width:100%;height:90px;border:0"></iframe>` : `<audio controls style="width:100%" src="${esc(url)}"></audio>`;
   return `<img class="pic" src="${m ? 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w1200' : esc(url)}" alt="">`;
 }
+const head = (s, si) => `<h3>${esc(s.title || 'Exercise ' + (si + 1))}</h3>${s.instructions ? `<div class="mut">${rich(s.instructions)}</div>` : ''}`;
 
 function renderTask() {
   const hw = S.task.hw;
-  app(`<h2>${esc(hw.title)}</h2><div class="mut">${S.task.deadline ? 'Дедлайн: ' + esc(S.task.deadline) : ''}</div>` +
-    hw.sections.map((s, si) => `<div class="card"><h3>${esc(s.title || 'Завдання ' + (si + 1))}</h3>
-      ${s.instructions ? `<div class="mut">${rich(s.instructions)}</div>` : ''}
+  S.total = hw.sections.reduce((a, s) => a + s.items.length, 0);
+  app(`<h2>${esc(hw.title)}</h2><div class="mut" style="margin-bottom:12px">${S.task.deadline ? 'Deadline: ' + esc(S.task.deadline) : ''}</div>` +
+    hw.sections.map((s, si) => `<div class="card">${head(s, si)}
       ${s.type === 'cloze' ? '' : (s.text ? `<div class="txt">${rich(s.text)}</div>` : '')}${media(s.imageUrl, 'img')}${media(s.audioUrl, 'audio')}
       ${s.type === 'cloze' ? clozeHTML(s, si) : s.items.map((it, i) => itemHTML(s, si, it, i)).join('')}</div>`).join('') +
-    `<div class="sticky"><div class="err" id="e"></div><button class="btn full" id="sb" onclick="submitTask()">Надіслати роботу</button></div>`);
+    `<div class="bar"><div class="mut">Answered: <b id="pg"></b></div><div class="prog"><i id="pb"></i></div><div class="err" id="e"></div><button class="btn full" id="sb" onclick="submitTask()">Submit homework</button></div>`);
   hw.sections.forEach((s, si) => { if (s.type === 'order') s.items.forEach((it, i) => drawOrd(si + '.' + i, si, i)); });
+  prog();
 }
 
 function clozeHTML(s, si) {
@@ -176,14 +222,15 @@ function itemHTML(s, si, it, i) {
   const k = si + '.' + i, v = S.ans[k] || '';
   let body;
   if (s.type === 'match')
-    body = `<select onchange="setAns('${k}',this.value)"><option value="">— оберіть —</option>${s.rights.map(r => `<option ${r === v ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>`;
+    body = `<select onchange="setAns('${k}',this.value)"><option value="">— choose —</option>${s.rights.map(r => `<option ${r === v ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>`;
   else if (s.type === 'order') body = `<div id="o${k}"></div>`;
   else if (it.options)
     body = it.options.map((o, n) => `<label class="opt"><input type="radio" name="r${k}" ${o === v ? 'checked' : ''} onchange="setAns('${k}',S.task.hw.sections[${si}].items[${i}].options[${n}])">${esc(o)}</label>`).join('');
   else if (s.type === 'open' || s.type === 'translation' || s.type === 'transform')
     body = `<textarea oninput="setAns('${k}',this.value)">${esc(v)}</textarea>`;
   else body = `<input type="text" value="${esc(v)}" oninput="setAns('${k}',this.value)" autocomplete="off" autocapitalize="off" spellcheck="false">`;
-  return `<div class="q"><div style="white-space:pre-wrap;margin-bottom:6px"><b>${i + 1}.</b> ${rich(it.q)}</div>${body}</div>`;
+  const q = s.type === 'order' ? 'Put the words in the correct order:' : it.q;
+  return `<div class="q"><div class="qt"><b>${i + 1}.</b> ${rich(q)}</div>${body}</div>`;
 }
 
 function drawOrd(k, si, i) {
@@ -195,13 +242,12 @@ function ordAdd(k, si, i, n) { (S.ord[k] = S.ord[k] || []).push(n); ordSync(k, s
 function ordUndo(k, si, i, pos) { S.ord[k].splice(pos, 1); ordSync(k, si, i); }
 function ordSync(k, si, i) {
   const w = S.task.hw.sections[si].items[i].words;
-  S.ans[k] = S.ord[k].map(n => w[n]).join(' '); saveDraft(); drawOrd(k, si, i);
+  S.ans[k] = S.ord[k].map(n => w[n]).join(' '); saveDraft(); drawOrd(k, si, i); prog();
 }
 
 async function submitTask() {
-  const total = S.task.hw.sections.reduce((a, s) => a + s.items.length, 0);
   const done = Object.keys(S.ans).filter(k => String(S.ans[k]).trim()).length;
-  if (done < total && !confirm(`Ви відповіли на ${done} із ${total} питань. Надіслати все одно?`)) return;
+  if (done < S.total && !confirm(`You answered ${done} of ${S.total} questions. Submit anyway?`)) return;
   $('sb').disabled = true; $('e').textContent = '';
   try {
     const r = await api('submit', { name: S.name, group: S.group, assignmentId: S.task.assignmentId, answers: S.ans });
@@ -210,61 +256,88 @@ async function submitTask() {
   } catch (e) { $('e').textContent = e.message; $('sb').disabled = false; }
 }
 
-/* ---------- Результат ---------- */
+/* ---------- Result: помилки показуються прямо в тексті вправ ---------- */
 async function openResult(id) {
-  app('<div class="card mut">Завантаження…</div>');
+  app('<div class="card mut">Loading…</div>');
   try {
     const [r, t] = await Promise.all([
       api('myResult', { name: S.name, group: S.group, assignmentId: id }),
       api('resultView', { name: S.name, group: S.group, assignmentId: id }).catch(() => null)
     ]);
     showResult(r, t && t.hw);
-  } catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Назад</button>`); }
+  } catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Back</button>`); }
+}
+function ansChip(d) {
+  if (!d) return '';
+  const g = d.given ? esc(d.given) : '';
+  if (d.manual) return `<span class="a man">${g || '—'}</span>`;
+  if (d.ok) return `<span class="a ok">✓ ${g}</span>`;
+  return `<span class="a bad">${g ? '<s>' + g + '</s>' : '&nbsp;&nbsp;&nbsp;'}</span><span class="a fix">${esc(d.correct)}</span>`;
+}
+function reviewItem(s, si, it, i, d) {
+  if (!d) return '';
+  const num = `<b>${i + 1}.</b> `;
+  if (it.options) {
+    const opts = it.options.map(o => {
+      const mine = o === d.given, right = !d.ok && !d.manual && o === d.correct;
+      const c = 'ro' + (mine ? (d.ok ? ' ok' : d.manual ? ' man' : ' bad') : right ? ' fix' : '');
+      return `<div class="${c}">${mine ? (d.ok ? '✓ ' : d.manual ? '' : '✗ ') : right ? '✓ ' : ''}${esc(o)}</div>`;
+    }).join('');
+    return `<div class="q"><div class="qt">${num}${rich(it.q)}</div>${opts}${!d.given && !d.manual ? '<div class="err">No answer given</div>' : ''}</div>`;
+  }
+  if (s.type === 'match') return `<div class="q"><div class="qt">${num}${rich(it.q)} → ${ansChip(d)}</div></div>`;
+  let line = s.type === 'order' ? 'Put the words in the correct order:' : rich(it.q);
+  if (s.type !== 'order' && /_{2,}/.test(line)) line = line.replace(/_{2,}/, () => ansChip(d));
+  else line += `<div class="ansrow">${ansChip(d)}</div>`;
+  return `<div class="q"><div class="qt">${num}${line}</div>${d.manual ? '<div class="mut">Your teacher will check this answer.</div>' : ''}</div>`;
+}
+function reviewHTML(hw, by) {
+  return hw.sections.map((s, si) => {
+    const body = s.type === 'cloze'
+      ? '<div class="cloze">' + rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((p, n) => n % 2 === 0 ? p : ansChip(by[si + '.' + p])).join('') + '</div>'
+      : s.items.map((it, i) => reviewItem(s, si, it, i, by[si + '.' + i])).join('');
+    return `<div class="card">${head(s, si)}${s.type !== 'cloze' && s.text ? `<div class="txt">${rich(s.text)}</div>` : ''}${body}</div>`;
+  }).join('');
 }
 function showResult(r, hw) {
   const by = {}; r.details.forEach(d => by[d.key] = d);
+  const ok = r.details.filter(d => d.ok).length, bad = r.details.filter(d => !d.manual && !d.ok).length, man = r.details.filter(d => d.manual).length;
   const pend = r.pendingManual || r.pending;
-  app(`<div class="card" style="text-align:center"><div class="mut">Ваш результат</div><div class="big">${r.percent}%</div>
-    <div>${r.score} ${r.max ? 'з ' + r.max + ' балів' : 'балів'}</div>
-    ${pend ? '<p><span class="tag warn">Відкриті відповіді перевірить викладач — відсоток може змінитися</span></p>' : ''}
-    ${r.comment ? `<p class="txt">${esc(r.comment)}</p>` : ''}</div>` +
-    (hw ? hw.sections.map((s, si) => `<div class="card"><h3>${esc(s.title || 'Завдання ' + (si + 1))}</h3>` + s.items.map((it, i) => {
-      const d = by[si + '.' + i]; if (!d) return '';
-      const cls = d.manual ? 'man' : d.ok ? 'ok' : 'no';
-      return `<div class="q res ${cls}" style="padding-left:12px"><div><b>${i + 1}.</b> ${rich(it.q || ('Пропуск ' + (i + 1)))}</div>
-        <div>Ваша відповідь: <b>${esc(d.given) || '—'}</b></div>
-        ${d.manual ? '<div class="mut">Перевіряє викладач</div>' : d.ok ? '' : `<div>Правильно: <b>${esc(d.correct)}</b></div>`}</div>`;
-    }).join('') + '</div>').join('') : '') +
-    `<button class="btn" onclick="showList()">До списку завдань</button>`);
+  const msg = r.percent >= 90 ? 'Excellent work! 🌟' : r.percent >= 70 ? 'Good job! 👍' : r.percent >= 50 ? 'Not bad — review your mistakes below.' : 'Keep practising — check the mistakes below.';
+  app(`<div class="card sum"><div class="mut">Your result</div><div class="big">${r.percent}%</div>
+    <div>${r.score}${r.max ? ' / ' + r.max : ''} points</div><p><b>${msg}</b></p>
+    <div class="legend"><span class="a ok">✓ ${ok} correct</span><span class="a bad">✗ ${bad} mistakes</span>${man ? `<span class="a man">${man} for teacher</span>` : ''}</div>
+    ${pend ? '<p><span class="tag warn">Open answers will be checked by your teacher — your percentage may change</span></p>' : ''}
+    ${r.comment ? `<div class="txt"><b>Teacher’s comment:</b><br>${esc(r.comment)}</div>` : ''}</div>` +
+    (hw ? '<p class="mut">Your mistakes are marked in red; the correct answer is shown in green.</p>' + reviewHTML(hw, by) : '') +
+    `<button class="btn" onclick="showList()">Back to my homework</button>`);
 }
 
-/* ---------- Флешкартки ---------- */
+/* ---------- Flashcards ---------- */
 const F = { id: '', title: '', all: [], cards: [], i: 0, flip: false, known: [], again: [], rev: false };
 function shuf(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 async function openDeck(id) {
-  app('<div class="card mut">Завантаження…</div>');
+  app('<div class="card mut">Loading…</div>');
   try { const d = await api('deck', { name: S.name, group: S.group, deckId: id }); F.id = id; F.title = d.title; F.all = d.cards; startDeck(d.cards, true); }
-  catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Назад</button>`); }
+  catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Back</button>`); }
 }
 function startDeck(cards, mix) { F.cards = mix ? shuf(cards) : cards.slice(); F.i = 0; F.flip = false; F.known = []; F.again = []; drawCard(); }
 function drawCard() {
   if (F.i >= F.cards.length) return deckDone();
   const c = F.cards[F.i], front = F.rev ? c.back : c.front, back = F.rev ? c.front : c.back;
   app(`<div class="row"><h2>${esc(F.title)}</h2><span class="tag">${F.i + 1} / ${F.cards.length}</span></div>
-  <div class="fc" onclick="flipCard()"><div class="fcw">${esc(F.flip ? back : front)}</div>${F.flip && c.example ? `<div class="mut">${esc(c.example)}</div>` : ''}${F.flip ? '' : '<div class="mut">Натисніть, щоб побачити відповідь</div>'}</div>
-  ${F.flip ? `<div class="row"><button class="btn alt" style="flex:1" onclick="markCard(false)">Ще вчу</button><button class="btn" style="flex:1" onclick="markCard(true)">Знаю</button></div>` : '<button class="btn full" onclick="flipCard()">Показати відповідь</button>'}
-  <p class="mut"><a href="#" onclick="F.rev=!F.rev;F.flip=false;drawCard();return false">Напрямок: ${F.rev ? 'UA → EN' : 'EN → UA'} (змінити)</a> · <a href="#" onclick="showList();return false">Вийти</a></p>`);
+  <div class="fc" onclick="flipCard()"><div class="fcw">${esc(F.flip ? back : front)}</div>${F.flip && c.example ? `<div class="mut">${esc(c.example)}</div>` : ''}${F.flip ? '' : '<div class="mut">Tap the card to reveal the answer</div>'}</div>
+  ${F.flip ? `<div class="row"><button class="btn alt" style="flex:1" onclick="markCard(false)">Still learning</button><button class="btn" style="flex:1" onclick="markCard(true)">I know it</button></div>` : '<button class="btn full" onclick="flipCard()">Show answer</button>'}
+  <p class="mut"><a href="#" onclick="F.rev=!F.rev;F.flip=false;drawCard();return false">Direction: ${F.rev ? 'UA → EN' : 'EN → UA'} (change)</a> · <a href="#" onclick="showList();return false">Exit</a></p>`);
 }
 function flipCard() { F.flip = !F.flip; drawCard(); }
 function markCard(k) { (k ? F.known : F.again).push(F.cards[F.i]); F.i++; F.flip = false; drawCard(); }
 function deckDone() {
-  app(`<div class="card" style="text-align:center"><h2>Набір пройдено 🎉</h2><p>Знаю: <b>${F.known.length}</b> · Ще вчу: <b>${F.again.length}</b></p></div>` +
-    (F.again.length ? '<p><button class="btn full" onclick="startDeck(F.again,true)">Повторити «Ще вчу»</button></p>' : '') +
-    '<p><button class="btn alt full" onclick="startDeck(F.all,true)">Почати спочатку</button></p><p><button class="btn alt full" onclick="showList()">До списку</button></p>');
+  app(`<div class="card sum"><h2>Deck complete 🎉</h2><p>I know it: <b>${F.known.length}</b> · Still learning: <b>${F.again.length}</b></p></div>` +
+    (F.again.length ? '<p><button class="btn full" onclick="startDeck(F.again,true)">Practise “Still learning”</button></p>' : '') +
+    '<p><button class="btn alt full" onclick="startDeck(F.all,true)">Start over</button></p><p><button class="btn alt full" onclick="showList()">Back to my homework</button></p>');
 }
 
-/* старт */
-const sv = store.get('eh_student');
 goHome();
 </script>
 </body>
