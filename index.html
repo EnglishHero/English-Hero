@@ -88,9 +88,9 @@ async function studentLogin(msg) {
   <div class="err" id="e">${esc(msg)}</div>
   <p><button class="btn full" id="go" onclick="doLogin()">Увійти</button></p></div>`);
   try {
-    const gs = await api('groups');
+    const gs = await api('groups'); if (!$('g')) return;
     $('g').innerHTML = '<option value="">— оберіть групу —</option>' + gs.map(g => `<option ${g === saved.group ? 'selected' : ''}>${esc(g)}</option>`).join('');
-  } catch (e) { $('e').textContent = e.message; }
+  } catch (e) { if ($('e')) $('e').textContent = e.message; }
 }
 async function doLogin() {
   $('e').textContent = ''; $('go').disabled = true;

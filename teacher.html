@@ -143,7 +143,7 @@ function impHw() { run(async () => {
   T.E = { id: h.id, title: h.title, sections: h.sections.map(toSec) }; drawEd(); toast('Завантажено в редактор — перевірте й збережіть'); }); }
 
 function drawEd() {
-  const E = T.E; if (!E) return;
+  const E = T.E; if (!E || !$('ed')) return;
   $('ed').innerHTML = `<div class="card"><h2>Редактор</h2><label class="f">Назва завдання</label><input value="${esc(E.title)}" oninput="T.E.title=this.value">
   ${E.sections.map((s, i) => `<div class="sec"><div class="row"><select onchange="secSet(${i},'type',this.value,1)">${Object.keys(TYPES).map(k => `<option value="${k}" ${k === s.type ? 'selected' : ''}>${TYPES[k]}</option>`).join('')}</select>
     <input placeholder="Заголовок секції" value="${esc(s.title)}" oninput="secSet(${i},'title',this.value)"><input type="number" min="1" style="max-width:90px" title="Балів за питання" value="${s.pts}" oninput="secSet(${i},'pts',this.value)"><button class="btn red sm" onclick="T.E.sections.splice(${i},1);drawEd()">✕</button></div>
@@ -178,15 +178,17 @@ function viewRes() {
   loadRes();
 }
 const loadRes = () => run(async () => {
-  const id = $('rs').value; T.res = await api('results', { assignmentId: id });
+  if (!$('rs')) return; const id = $('rs').value; T.res = await api('results', { assignmentId: id }); if (!$('rl')) return;
   const avg = T.res.length ? Math.round(T.res.reduce((a, r) => a + r.percent, 0) / T.res.length) : 0;
   let miss = ''; if (id) { const m = await api('notSubmitted', { assignmentId: id }); miss = m.length ? `<p class="mut">Ще не здали: ${m.map(esc).join(', ')}</p>` : '<p class="mut">Здали всі 👍</p>'; }
+  if (!$('rl')) return;
   $('rl').innerHTML = `<div class="card"><h2>Робіт: ${T.res.length} · середній результат: ${avg}%</h2>${miss}<div class="scroll"><table><tr><th>Учень</th><th>Група</th><th>Завдання</th><th>Бали</th><th>%</th><th>Статус</th><th>Здано</th></tr>
     ${T.res.map((r, i) => `<tr class="c" onclick="detail(${i})"><td>${esc(r.student)}</td><td>${esc(r.group)}</td><td>${esc(r.title)}</td><td>${r.score}/${r.max}</td><td>${r.percent}%</td><td><span class="tag ${/Очікує/.test(r.status) ? 'w' : ''}">${esc(r.status)}</span></td><td>${esc(r.time)}</td></tr>`).join('')}</table></div></div>`;
   $('rd').innerHTML = '';
 });
 async function detail(i) { run(async () => {
   const r = T.res[i]; if (!T.hwCache[r.hwId]) T.hwCache[r.hwId] = await api('getHomework', { id: r.hwId }).catch(() => null);
+  if (!$('rd')) return;
   const hw = T.hwCache[r.hwId], by = {}; r.details.forEach(d => by[d.key] = d);
   const q = (si, ii) => hw ? ((hw.sections[si].items || hw.sections[si].pairs || [])[ii] || {}) : {};
   const manualMax = r.details.filter(d => d.manual).reduce((a, d) => a + d.points, 0);
