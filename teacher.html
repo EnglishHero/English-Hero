@@ -231,6 +231,8 @@ const delGroup = gi => confirm('Видалити групу, її учнів і 
 function viewDecks() {
   $('tab').innerHTML = `<div class="card"><h2>Набори флешкарток</h2>${T.decks.map(d => `<div class="row" style="padding:6px 0;border-top:1px solid var(--line)"><div>${d.unit ? '<span class="tag">' + esc(d.unit) + '</span> ' : ''}${esc(d.title)} <span class="tag">${d.count} слів · ${d.blocks} бл.</span></div><button class="btn alt sm" onclick="editDeck('${d.id}')">Редагувати</button><button class="btn red sm" onclick="delDeck('${d.id}')">Видалити</button></div>`).join('') || '<div class="mut">Поки порожньо</div>'}
     <p><button class="btn" onclick="T.D={title:'',unit:'',lines:''};drawDeckEd()">+ Новий набір</button></p></div><div id="ded"></div>
+    <div class="card"><h2>Імпорт із Claude (JSON)</h2><textarea id="dimp" style="min-height:140px" placeholder='{"title":"...","unit":"Unit 1","blocks":[{"title":"Block 1","cards":[{"front":"red","back":"червоний","example":"A red apple."}]}]}'></textarea>
+    <p><button class="btn" onclick="impDeck()">Імпортувати в редактор</button></p></div>
     <div class="card"><h2>Відкрити блоки слів групі</h2><div class="mut">Позначені блоки учні бачать, зняті — ні. Щоб додати нові слова до старих, позначте наступний блок; щоб прибрати — зніміть позначку.</div>
     <div class="row" style="margin-top:10px"><select id="dsel" onchange="deckPick()">${T.decks.map(d => `<option value="${d.id}">${esc((d.unit ? d.unit + ' · ' : '') + d.title)}</option>`).join('')}</select>
     <select id="dgrp" onchange="deckPick()">${T.groups.map(g => `<option>${esc(g.name)}</option>`).join('')}</select></div><div id="dbl" style="margin-top:10px" class="mut">${T.decks.length && T.groups.length ? 'Завантаження…' : 'Спочатку створіть набір і групу'}</div></div>
@@ -261,6 +263,19 @@ function drawDeckEd() {
     <p><button class="btn" onclick="saveDk()">Зберегти набір</button></p></div>`;
   document.querySelectorAll('#ded textarea').forEach(autoH);
 }
+function impDeck() { run(async () => {
+  let j = JSON.parse($('dimp').value.replace(/^\s*```(?:json)?|```\s*$/g, '').trim());
+  if (Array.isArray(j)) j = { blocks: [{ title: 'Block 1', cards: j }] };
+  const raw = j.blocks || (j.cards ? [{ title: 'Block 1', cards: j.cards }] : null);
+  if (!raw) throw new Error('У JSON має бути blocks (або cards)');
+  const s = v => String(v == null ? '' : v).trim();
+  const blocks = raw.map((b, n) => ({ title: s(b.title || b.name) || 'Block ' + (n + 1),
+    cards: (b.cards || b.words || []).map(c => ({ front: s(c.front || c.word || c.en || c.english), back: s(c.back || c.translation || c.ua || c.uk), example: s(c.example || c.sentence) })).filter(c => c.front && c.back) })).filter(b => b.cards.length);
+  if (!blocks.length) throw new Error('Не знайдено жодної картки зі словом і перекладом');
+  T.D = { title: s(j.title), unit: s(j.unit), lines: blocks.map(b => '# ' + b.title + '\n' + b.cards.map(c => [c.front, c.back, c.example].join(' :: ').replace(/( :: )+$/, '')).join('\n')).join('\n\n') };
+  drawDeckEd(); $('ded').scrollIntoView({ behavior: 'smooth' });
+  toast('Завантажено ' + blocks.reduce((a, b) => a + b.cards.length, 0) + ' карток у блоках: ' + blocks.length + '. Перевірте й натисніть «Зберегти набір»');
+}); }
 const editDeck = id => run(async () => { const d = await api('getDeck', { id });
   T.D = { id: d.id, title: d.title, unit: d.unit || '', lines: d.blocks.map(b => '# ' + b.title + '\n' + b.cards.map(c => [c.front, c.back, c.example || ''].join(' :: ').replace(/( :: )+$/, '')).join('\n')).join('\n\n') }; drawDeckEd(); });
 const saveDk = () => run(async () => {
