@@ -72,11 +72,26 @@ img.pic{max-width:100%;border-radius:10px;margin:10px 0}
 .tile.done{background:#e1f4e7;border-color:#8fd0a8;color:var(--ok);opacity:.65;pointer-events:none}
 .tile.ok{background:#e1f4e7;border-color:#8fd0a8;color:var(--ok);font-weight:700}.tile.bad{background:#fde1de;border-color:#e5857d;color:var(--bad);font-weight:700}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.subnav{display:none;background:#fff;border-bottom:1px solid var(--line);padding:8px 14px;gap:8px;overflow-x:auto;white-space:nowrap;position:sticky;top:0;z-index:5}
+.subnav.on{display:flex}
+.subnav button{border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:7px 16px;font:inherit;font-size:15px;cursor:pointer;flex:none}
+.subnav button.act{background:var(--g);color:#fff;border-color:var(--g)}.subnav .sp{flex:1}
+.backl{display:inline-block;margin-bottom:12px;color:var(--g);font-weight:600;cursor:pointer}.backl:hover{text-decoration:underline}
+.unit{background:#fff;border:1px solid var(--line);border-radius:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(20,83,45,.06)}
+.unit>summary{list-style:none;cursor:pointer;padding:16px 20px;font-weight:700;font-size:19px;display:flex;align-items:center;gap:10px}
+.unit>summary::-webkit-details-marker{display:none}.unit>summary span:first-child{flex:1}
+.unit>summary::after{content:'▾';color:var(--mut)}.unit[open]>summary::after{content:'▴'}
+.item{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--line)}
+.item h3{margin:0 0 2px;font-size:17px}.ic{font-size:24px;margin-right:12px;line-height:1.3}
+.seg{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
+.seg button{border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:7px 14px;font:inherit;font-size:15px;cursor:pointer}
+.seg button.on{background:var(--g);color:#fff;border-color:var(--g)}
 @media(max-width:480px){h1{font-size:25px}.herologo{width:140px;height:140px}.brand b{font-size:15px}}
 </style>
 </head>
 <body>
-<header><div class="brand" onclick="goHome()"><img id="hl" alt=""><b>ENGLISH HERO</b></div><span id="who" class="pill"></span></header>
+<header><div class="brand" onclick="homeClick()"><img id="hl" alt=""><b>ENGLISH HERO</b></div><span id="who" class="pill"></span></header>
+<nav class="subnav" id="sn"></nav>
 <main id="app"></main>
 
 <script>
@@ -86,7 +101,7 @@ const LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAAFACAMAAAD6TlWY
 const $ = id => document.getElementById(id);
 $('hl').src = LOGO; $('fav').href = LOGO;
 
-const S = { name: '', group: '', list: [], decks: [], task: null, ans: {}, ord: {}, total: 0 };
+const S = { name: '', group: '', list: [], decks: [], task: null, ans: {}, ord: {}, total: 0, filter: 'all', nav: 0 };
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 /* <b>, <i>, <u> дозволені, усе інше екранується */
 function rich(s) {
@@ -99,7 +114,19 @@ function rich(s) {
   });
   return o + st.reverse().map(t => '</' + t + '>').join('');
 }
-const app = h => { $('app').innerHTML = h; window.scrollTo(0, 0); };
+const app = h => { $('app').innerHTML = h; window.scrollTo(0, 0); S.nav++; };
+/* навігація: системна кнопка «Назад» і кнопки «← Back» ведуть на крок назад */
+function push(v) { try { if (history.state && history.state.v === v) return; history.pushState({ v }, ''); } catch (e) {} }
+function hrep(v) { try { history.replaceState({ v }, ''); } catch (e) {} }
+function back() { const v = history.state && history.state.v; if (v && v !== 'list') history.back(); else showList(); }
+function homeClick() { S.name ? showList() : goHome(); }
+function setNav() {
+  const n = $('sn'); if (!S.name) { n.className = 'subnav'; n.innerHTML = ''; return; }
+  n.className = 'subnav on';
+  const b = (f, l) => `<button class="${S.filter === f ? 'act' : ''}" onclick="goFilter('${f}')">${l}</button>`;
+  n.innerHTML = b('all', '📚 My units') + b('hw', '📝 Homework') + b('deck', '🃏 Flashcards') + '<span class="sp"></span><button onclick="logout()">Log out</button>';
+}
+function goFilter(f) { S.filter = f; showList(); }
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
@@ -134,7 +161,7 @@ async function api(action, data) {
 
 /* ---------- Home ---------- */
 function goHome() {
-  S.task = null; $('who').textContent = '';
+  S.task = null; $('who').textContent = ''; setNav();
   app(`<section class="hero"><img class="herologo" src="${LOGO}" alt="English Hero"><h1>Welcome to English Hero!</h1>
   <p>Your online homework platform</p>
   <div class="btns"><button class="btn" onclick="studentLogin()">Student Login</button>
@@ -160,26 +187,38 @@ async function doLogin() {
     const d = await api('login', { name: $('n').value, group: $('g').value });
     S.name = d.name; S.group = d.group; S.list = d.assignments; S.decks = d.decks || [];
     store.set('eh_student', { name: S.name, group: S.group });
-    showList();
+    showList(true);
   } catch (e) { $('e').textContent = e.message; $('go').disabled = false; }
 }
 
-/* ---------- Homework list ---------- */
-async function showList() {
+/* ---------- Units list ---------- */
+async function showList(skip) {
   if (!S.name) return studentLogin();
-  $('who').textContent = S.name + ' · ' + S.group;
+  $('who').textContent = S.name + ' · ' + S.group; setNav();
+  renderList(); const token = S.nav;
+  if (skip) return;
   const d = await api('login', { name: S.name, group: S.group }).catch(e => null);
-  if (d) { S.list = d.assignments; S.decks = d.decks || []; }
-  app(`<h2>My homework</h2>` + (S.list.length ? S.list.map(a => `<div class="card row">
-    <div><h3>${esc(a.title)}</h3><div class="mut">${a.deadline ? 'Deadline: ' + esc(a.deadline) : 'No deadline'}</div></div>
-    <div>${a.done
-      ? `<span class="tag ${a.pending ? 'warn' : ''}">${a.pending ? 'Pending teacher check' : a.percent + '%'}</span> <button class="btn alt" onclick="openResult('${a.id}')">Result</button>`
-      : `<button class="btn" onclick="openTask('${a.id}')">Start</button>`}</div></div>`).join('')
-    : '<div class="card mut">There is no homework for your group yet.</div>') +
-    ((S.decks || []).length ? '<h2 style="margin-top:28px">Flashcards</h2>' + S.decks.map(d => `<div class="card row"><div><h3>${esc(d.title)}</h3><div class="mut">${d.count} cards</div></div><button class="btn" onclick="openDeck('${d.id}')">Study</button></div>`).join('') : '') +
-    `<p><button class="btn alt" onclick="logout()">Log out</button></p>`);
+  if (d) { S.list = d.assignments; S.decks = d.decks || []; if (S.nav === token) renderList(); }
 }
-function logout() { S.name = ''; S.group = ''; store.del('eh_student'); goHome(); }
+function hwRow(a) {
+  return `<div class="item"><div style="display:flex;align-items:flex-start"><span class="ic">📝</span><div><h3>${esc(a.title)}</h3><div class="mut">${a.parts && a.parts.length ? esc(a.parts.join(' · ')) + '<br>' : ''}${a.deadline ? 'Deadline: ' + esc(a.deadline) : 'No deadline'}</div></div></div>
+    <div>${a.done ? `<span class="tag ${a.pending ? 'warn' : ''}">${a.pending ? 'Pending teacher check' : a.percent + '%'}</span> <button class="btn alt" onclick="openResult('${a.id}')">Result</button>` : `<button class="btn" onclick="openTask('${a.id}')">Start</button>`}</div></div>`;
+}
+function deckRow(d) {
+  return `<div class="item"><div style="display:flex;align-items:flex-start"><span class="ic">🃏</span><div><h3>${esc(d.title)}</h3><div class="mut">${d.count} words${d.blocks > 1 ? ' · ' + d.blocks + ' blocks' : ''}</div></div></div><button class="btn" onclick="openDeck('${d.id}')">Study</button></div>`;
+}
+function renderList() {
+  const f = S.filter || 'all', items = [];
+  if (f !== 'deck') S.list.forEach(a => items.push({ k: 'hw', u: a.unit || '', a }));
+  if (f !== 'hw') S.decks.forEach(d => items.push({ k: 'deck', u: d.unit || '', d }));
+  const units = Array.from(new Set(items.map(x => x.u))).sort((a, b) => !a ? 1 : !b ? -1 : a.localeCompare(b, undefined, { numeric: true }));
+  const last = units.filter(u => u).slice(-1)[0];
+  app(`<h2>${{ all: 'My units', hw: 'My homework', deck: 'My flashcards' }[f]}</h2>` + (units.length ? units.map(u => {
+    const its = items.filter(x => x.u === u), open = units.length <= 2 || u === last || its.some(x => x.k === 'hw' && !x.a.done);
+    return `<details class="unit" ${open ? 'open' : ''}><summary><span>${esc(u || 'Other')}</span><span class="tag">${its.length}</span></summary>${its.map(x => x.k === 'hw' ? hwRow(x.a) : deckRow(x.d)).join('')}</details>`;
+  }).join('') : '<div class="card mut">Nothing here yet. Your teacher will add new material soon.</div>'));
+}
+function logout() { S.name = ''; S.group = ''; S.list = []; S.decks = []; store.del('eh_student'); hrep('list'); goHome(); }
 
 /* ---------- Doing the homework ---------- */
 async function openTask(id) {
@@ -188,7 +227,7 @@ async function openTask(id) {
     const d = await api('task', { name: S.name, group: S.group, assignmentId: id });
     S.task = d; const dr = store.get('eh_draft_' + S.name + id) || {};
     S.ans = dr.ans || {}; S.ord = dr.ord || {};
-    renderTask();
+    renderTask(); push('task');
   } catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Back</button>`); }
 }
 const saveDraft = () => store.set('eh_draft_' + S.name + S.task.assignmentId, { ans: S.ans, ord: S.ord });
@@ -210,7 +249,7 @@ const head = (s, si) => `<h3>${esc(s.title || 'Exercise ' + (si + 1))}</h3>${s.i
 function renderTask() {
   const hw = S.task.hw;
   S.total = hw.sections.reduce((a, s) => a + s.items.length, 0);
-  app(`<h2>${esc(hw.title)}</h2><div class="mut" style="margin-bottom:12px">${S.task.deadline ? 'Deadline: ' + esc(S.task.deadline) : ''}</div>` +
+  app(`<a class="backl" onclick="back()">← Back to my units</a><h2>${esc(hw.title)}</h2><div class="mut" style="margin-bottom:12px">${S.task.unit ? esc(S.task.unit) + ' · ' : ''}${S.task.deadline ? 'Deadline: ' + esc(S.task.deadline) + ' · ' : ''}Your answers are saved automatically.</div>` +
     hw.sections.map((s, si) => `<div class="card">${head(s, si)}
       ${s.type === 'cloze' ? '' : (s.text ? `<div class="txt">${rich(s.text)}</div>` : '')}${media(s.imageUrl, 'img')}${media(s.audioUrl, 'audio')}
       ${s.type === 'cloze' ? clozeHTML(s, si) : s.items.map((it, i) => itemHTML(s, si, it, i)).join('')}</div>`).join('') +
@@ -260,7 +299,7 @@ async function submitTask() {
   try {
     const r = await api('submit', { name: S.name, group: S.group, assignmentId: S.task.assignmentId, answers: S.ans });
     store.del('eh_draft_' + S.name + S.task.assignmentId);
-    showResult(r, S.task.hw);
+    showResult(r, S.task.hw, true);
   } catch (e) { $('e').textContent = e.message; $('sb').disabled = false; }
 }
 
@@ -307,22 +346,23 @@ function reviewHTML(hw, by) {
     return `<div class="card">${head(s, si)}${s.type !== 'cloze' && s.text ? `<div class="txt">${rich(s.text)}</div>` : ''}${body}</div>`;
   }).join('');
 }
-function showResult(r, hw) {
+function showResult(r, hw, replace) {
   const by = {}; r.details.forEach(d => by[d.key] = d);
   const ok = r.details.filter(d => d.ok).length, bad = r.details.filter(d => !d.manual && !d.ok).length, man = r.details.filter(d => d.manual).length;
   const pend = r.pendingManual || r.pending;
   const msg = r.percent >= 90 ? 'Excellent work! 🌟' : r.percent >= 70 ? 'Good job! 👍' : r.percent >= 50 ? 'Not bad — review your mistakes below.' : 'Keep practising — check the mistakes below.';
-  app(`<div class="card sum"><div class="mut">Your result</div><div class="big">${r.percent}%</div>
+  app(`<a class="backl" onclick="back()">← Back to my units</a><div class="card sum"><div class="mut">Your result</div><div class="big">${r.percent}%</div>
     <div>${r.score}${r.max ? ' / ' + r.max : ''} points</div><p><b>${msg}</b></p>
     <div class="legend"><span class="a ok">✓ ${ok} correct</span><span class="a bad">✗ ${bad} mistakes</span>${man ? `<span class="a man">${man} for teacher</span>` : ''}</div>
     ${pend ? '<p><span class="tag warn">Open answers will be checked by your teacher — your percentage may change</span></p>' : ''}
     ${r.comment ? `<div class="txt"><b>Teacher’s comment:</b><br>${esc(r.comment)}</div>` : ''}</div>` +
     (hw ? '<p class="mut">Your mistakes are marked in red; the correct answer is shown in green.</p>' + reviewHTML(hw, by) : '') +
-    `<button class="btn" onclick="showList()">Back to my homework</button>`);
+    `<button class="btn" onclick="back()">Back to my units</button>`);
+  replace ? hrep('result') : push('result');
 }
 
 /* ---------- Flashcards: різні режими + озвучка (безкоштовний голос браузера) ---------- */
-const F = { id: '', title: '', all: [], mode: '', queue: [], i: 0, flip: false, rev: false, wrong: [], right: 0, locked: false, opts: [], m: null, accent: store.get('eh_accent') || 'en-GB' };
+const F = { id: '', title: '', all: [], blocksData: [], scope: 'all', mode: '', queue: [], i: 0, flip: false, rev: false, wrong: [], right: 0, locked: false, opts: [], m: null, accent: store.get('eh_accent') || 'en-GB' };
 const CAN_SPEAK = 'speechSynthesis' in window;
 const shuf = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const fnorm = s => String(s == null ? '' : s).toLowerCase().replace(/[’‘`]/g, "'").replace(/[.!?;,]+$/, '').replace(/\s+/g, ' ').trim();
@@ -346,9 +386,11 @@ function setAccent(v) { F.accent = v; store.set('eh_accent', v); }
 
 async function openDeck(id) {
   app('<div class="card mut">Loading…</div>');
-  try { const d = await api('deck', { name: S.name, group: S.group, deckId: id }); F.id = id; F.title = d.title; F.all = d.cards; deckMenu(); }
+  try { const d = await api('deck', { name: S.name, group: S.group, deckId: id }); F.id = id; F.title = d.title; F.blocksData = d.blocks; F.all = [].concat.apply([], d.blocks.map(b => b.cards)); F.scope = 'all'; deckMenu(); push('deck'); }
   catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Back</button>`); }
 }
+const pool = () => F.scope === 'all' ? F.all : ((F.blocksData[F.scope] || {}).cards || F.all);
+function setScope(v) { F.scope = v; deckMenu(); }
 function deckMenu() {
   const modes = [
     ['flip', '🃏 Flashcards', 'Flip the cards and mark what you know'],
@@ -357,13 +399,13 @@ function deckMenu() {
     ['listen', '🔊 Listen & type', 'Hear the word and spell it'],
     ['match', '🧩 Matching game', 'Connect English words with translations']
   ].filter(m => CAN_SPEAK || m[0] !== 'listen');
-  app(`<h2>${esc(F.title)}</h2><div class="mut">${F.all.length} cards · choose how you want to practise</div>` +
+  const seg = F.blocksData.length > 1 ? `<div class="mut" style="margin-top:14px">Words to practise:</div><div class="seg"><button class="${F.scope === 'all' ? 'on' : ''}" onclick="setScope('all')">All words (${F.all.length})</button>${F.blocksData.map((b, n) => `<button class="${F.scope === n ? 'on' : ''}" onclick="setScope(${n})">${esc(b.title)} (${b.cards.length})</button>`).join('')}</div>` : '';
+  app(`<a class="backl" onclick="back()">← Back to my units</a><h2>${esc(F.title)}</h2><div class="mut">${pool().length} words · choose how you want to practise</div>${seg}` +
     modes.map(m => `<button class="mode" onclick="startMode('${m[0]}')"><b>${m[1]}</b><span>${m[2]}</span></button>`).join('') +
-    (CAN_SPEAK ? `<p class="mut">Voice: <select style="width:auto;padding:6px 10px" onchange="setAccent(this.value)"><option value="en-GB" ${F.accent === 'en-GB' ? 'selected' : ''}>British 🇬🇧</option><option value="en-US" ${F.accent === 'en-US' ? 'selected' : ''}>American 🇺🇸</option></select></p>` : '') +
-    `<p><button class="btn alt" onclick="showList()">Back to my homework</button></p>`);
+    (CAN_SPEAK ? `<p class="mut">Voice: <select style="width:auto;padding:6px 10px" onchange="setAccent(this.value)"><option value="en-GB" ${F.accent === 'en-GB' ? 'selected' : ''}>British 🇬🇧</option><option value="en-US" ${F.accent === 'en-US' ? 'selected' : ''}>American 🇺🇸</option></select></p>` : ''));
 }
 function startMode(m, cards) {
-  const src = (cards || F.all).slice();
+  const src = (cards || pool()).slice(); push('mode');
   F.mode = m; F.queue = shuf(src); F.i = 0; F.wrong = []; F.right = 0; F.flip = false; F.locked = false; F.m = null;
   if (m === 'match') return matchRound();
   drawQ();
@@ -373,14 +415,14 @@ function nextQ() { F.i++; F.flip = false; F.locked = false; drawQ(); }
 function drawQ() {
   if (F.i >= F.queue.length) return finishMode();
   const c = F.queue[F.i];
-  const head = `<div class="row"><h2>${esc(F.title)}</h2><span class="tag">${F.i + 1} / ${F.queue.length}</span></div><div class="prog"><i style="width:${F.i / F.queue.length * 100}%"></i></div>`;
-  const foot = `<p class="mut"><a href="#" onclick="deckMenu();return false">Change mode</a></p>`;
+  const head = `<a class="backl" onclick="back()">← Back to modes</a><div class="row"><h2>${esc(F.title)}</h2><span class="tag">${F.i + 1} / ${F.queue.length}</span></div><div class="prog"><i style="width:${F.i / F.queue.length * 100}%"></i></div>`;
+  const foot = `<p class="mut"><a href="#" onclick="back();return false">Change mode</a></p>`;
   const spk = CAN_SPEAK ? '<button class="spk" onclick="event.stopPropagation();sayCur()" title="Listen">🔊</button>' : '';
   if (F.mode === 'flip') {
     const front = F.rev ? c.back : c.front, back = F.rev ? c.front : c.back;
     app(head + `<div class="fc" onclick="F.flip=!F.flip;drawQ()"><div class="fcw">${esc(F.flip ? back : front)}</div>${F.flip && c.example ? `<div class="mut">${esc(c.example)}</div>` : ''}${F.flip ? '' : '<div class="mut">Tap the card to reveal the answer</div>'}${spk}</div>` +
       (F.flip ? `<div class="row"><button class="btn alt" style="flex:1" onclick="F.wrong.push(F.queue[F.i]);nextQ()">Still learning</button><button class="btn" style="flex:1" onclick="F.right++;nextQ()">I know it</button></div>` : '<button class="btn full" onclick="F.flip=true;drawQ()">Show answer</button>') +
-      `<p class="mut"><a href="#" onclick="F.rev=!F.rev;F.flip=false;drawQ();return false">Direction: ${F.rev ? 'UA → EN' : 'EN → UA'} (change)</a> · <a href="#" onclick="deckMenu();return false">Change mode</a></p>`);
+      `<p class="mut"><a href="#" onclick="F.rev=!F.rev;F.flip=false;drawQ();return false">Direction: ${F.rev ? 'UA → EN' : 'EN → UA'} (change)</a> · <a href="#" onclick="back();return false">Change mode</a></p>`);
   } else if (F.mode === 'mc') {
     const seen = {}; seen[fnorm(c.back)] = 1; const pool = [];
     shuf(F.all).forEach(x => { const k = fnorm(x.back); if (!seen[k] && pool.length < 3) { seen[k] = 1; pool.push(x.back); } });
@@ -422,10 +464,10 @@ function matchRound() {
 }
 function drawMatch(scroll) {
   const m = F.m, cls = (side, c) => m.done.indexOf(c) >= 0 ? 'done' : (m.flash && m.flash[side] === c) ? 'bad' : (m.sel && m.sel.side === side && m.sel.c === c) ? 'sel' : '';
-  const h = `<div class="row"><h2>${esc(F.title)}</h2><span class="tag">${Math.min(F.i + m.done.length, F.queue.length)} / ${F.queue.length}</span></div><div class="prog"><i style="width:${(F.i + m.done.length) / F.queue.length * 100}%"></i></div>
+  const h = `<a class="backl" onclick="back()">← Back to modes</a><div class="row"><h2>${esc(F.title)}</h2><span class="tag">${Math.min(F.i + m.done.length, F.queue.length)} / ${F.queue.length}</span></div><div class="prog"><i style="width:${(F.i + m.done.length) / F.queue.length * 100}%"></i></div>
     <p class="mut">Tap a word, then tap its translation.</p><div class="cols"><div>${m.L.map((c, n) => `<button class="tile ${cls('L', c)}" onclick="tapM('L',${n})">${esc(word(c))}</button>`).join('')}</div>
     <div>${m.R.map((c, n) => `<button class="tile ${cls('R', c)}" onclick="tapM('R',${n})">${esc(c.back)}</button>`).join('')}</div></div>
-    <p class="mut"><a href="#" onclick="deckMenu();return false">Change mode</a></p>`;
+    <p class="mut"><a href="#" onclick="back();return false">Change mode</a></p>`;
   if (scroll) app(h); else $('app').innerHTML = h;
 }
 function tapM(side, n) {
@@ -449,10 +491,23 @@ function finishMode() {
   app(`<div class="card sum"><h2>${F.wrong.length ? 'Well done!' : 'Perfect! 🎉'}</h2><div class="big">${pct}%</div><p>${ok} / ${total} correct</p></div>` +
     (F.wrong.length ? `<div class="card"><h3>Words to review</h3>${F.wrong.map((c, n) => `<div class="q row"><span><b>${esc(word(c))}</b> — ${esc(c.back)}</span>${CAN_SPEAK ? `<button class="spk" onclick="sayW(${n})">🔊</button>` : ''}</div>`).join('')}</div>
       <p><button class="btn full" onclick="startMode(F.mode, F.wrong.slice())">Practise these words again</button></p>` : '') +
-    '<p><button class="btn alt full" onclick="deckMenu()">Choose another mode</button></p><p><button class="btn alt full" onclick="showList()">Back to my homework</button></p>');
+    '<p><button class="btn alt full" onclick="back()">Choose another mode</button></p><p><button class="btn alt full" onclick="showList()">Back to my units</button></p>');
 }
 
-goHome();
+hrep('list');
+window.addEventListener('popstate', e => {
+  if (!S.name) return;
+  const v = (e.state && e.state.v) || 'list';
+  if ((v === 'deck' || v === 'mode') && F.all.length) return deckMenu();
+  showList();
+});
+const saved0 = store.get('eh_student');
+if (saved0 && saved0.name && saved0.group) {   // автоматичний вхід на цьому пристрої
+  app('<div class="card mut">Loading…</div>');
+  api('login', { name: saved0.name, group: saved0.group })
+    .then(d => { S.name = d.name; S.group = d.group; S.list = d.assignments; S.decks = d.decks || []; showList(true); })
+    .catch(() => goHome());
+} else goHome();
 </script>
 </body>
 </html>
