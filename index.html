@@ -47,6 +47,12 @@ input[type=text].gap{display:inline-block;width:150px;max-width:100%;padding:3px
 .big{font-size:56px;font-weight:800;color:var(--g);line-height:1.1}
 img.pic{max-width:100%;border-radius:10px;margin:10px 0}
 .err{color:var(--bad);font-weight:600;margin-top:10px}
+.bank{display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:var(--gl);border:1.5px dashed #9fb8a7;border-radius:12px;margin:10px 0;min-height:54px;align-items:center}
+.wchip{padding:8px 14px;background:#fff;border:1.5px solid var(--g);border-radius:10px;cursor:grab;font-weight:600;user-select:none;-webkit-user-select:none;transition:.12s}
+.wchip:hover{background:#f4faf6}.wchip.sel{background:var(--g);color:#fff}
+.dgap{display:inline-block;min-width:92px;min-height:32px;padding:0 10px;margin:0 3px;border-bottom:2px solid var(--g);background:#eef6f0;border-radius:6px;text-align:center;cursor:pointer;line-height:1.9;color:var(--mut);font-size:14px}
+.dgap.filled{background:#fff;border:1.5px solid var(--g);font-weight:700;color:var(--tx);font-size:inherit}.dgap.over{background:#cfe6d6}
+select.gapsel{display:inline-block;width:auto;min-width:110px;padding:4px 8px;margin:0 3px;border:1.5px solid var(--g);border-radius:8px;background:#eef6f0;font:inherit}
 .bar{position:sticky;bottom:0;background:linear-gradient(0deg,var(--bg) 70%,transparent);padding:14px 0 10px}
 .prog{height:8px;background:#dbe5de;border-radius:8px;overflow:hidden;margin:6px 0 12px}.prog i{display:block;height:100%;width:0;background:var(--g2);transition:.2s}
 /* review */
@@ -104,7 +110,7 @@ const LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAAFACAMAAAD6TlWY
 const $ = id => document.getElementById(id);
 $('hl').src = LOGO; $('fav').href = LOGO;
 
-const S = { name: '', group: '', list: [], decks: [], task: null, ans: {}, ord: {}, total: 0, filter: 'all', nav: 0 };
+const S = { name: '', group: '', list: [], decks: [], task: null, ans: {}, ord: {}, total: 0, filter: 'all', nav: 0, pick: null };
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 /* <b>, <i>, <u> дозволені, усе інше екранується */
 function rich(s) {
@@ -230,7 +236,7 @@ function renderList() {
   const last = units.filter(u => u).slice(-1)[0];
   app(`<h2>${{ all: 'My units', hw: 'My homework', deck: 'My flashcards' }[f]}</h2>` + (units.length ? units.map(u => {
     const its = items.filter(x => x.u === u), nn = its.filter(x => x.k === 'hw' ? newHw(x.a) : newBlocks(x.d).length > 0).length, open = units.length <= 2 || u === last || nn > 0 || its.some(x => x.k === 'hw' && !x.a.done);
-    return `<details class="unit" ${open ? 'open' : ''}><summary><span>${esc(u || 'Other')}</span>${nn ? `<span class="tag new">${nn} new</span>` : ''}<span class="tag">${its.length}</span></summary>${its.map(x => x.k === 'hw' ? hwRow(x.a) : deckRow(x.d)).join('')}</details>`;
+    return `<details class="unit"><summary><span>${esc(u || 'Other')}</span>${nn ? `<span class="tag new">${nn} new</span>` : ''}<span class="tag">${its.length}</span></summary>${its.map(x => x.k === 'hw' ? hwRow(x.a) : deckRow(x.d)).join('')}</details>`;
   }).join('') : '<div class="card mut">Nothing here yet. Your teacher will add new material soon.</div>'));
 }
 function logout() { S.name = ''; S.group = ''; S.list = []; S.decks = []; store.del('eh_student'); hrep('list'); goHome(); }
@@ -266,13 +272,49 @@ function renderTask() {
   S.total = hw.sections.reduce((a, s) => a + s.items.length, 0);
   app(`<a class="backl" onclick="back()">← Back to my units</a><h2>${esc(hw.title)}</h2><div class="mut" style="margin-bottom:12px">${S.task.unit ? esc(S.task.unit) + ' · ' : ''}${S.task.deadline ? 'Deadline: ' + esc(S.task.deadline) + ' · ' : ''}Your answers are saved automatically.</div>` +
     hw.sections.map((s, si) => `<div class="card">${head(s, si)}
-      ${s.type === 'cloze' ? '' : (s.text ? `<div class="txt">${rich(s.text)}</div>` : '')}${media(s.imageUrl, 'img')}${media(s.audioUrl, 'audio')}
-      ${s.type === 'cloze' ? clozeHTML(s, si) : s.items.map((it, i) => itemHTML(s, si, it, i)).join('')}</div>`).join('') +
+      ${INL(s.type) ? '' : (s.text ? `<div class="txt">${rich(s.text)}</div>` : '')}${media(s.imageUrl, 'img')}${media(s.audioUrl, 'audio')}
+      ${INL(s.type) ? inlineHTML(s, si) : s.items.map((it, i) => itemHTML(s, si, it, i)).join('')}</div>`).join('') +
     `<div class="bar"><div class="mut">Answered: <b id="pg"></b></div><div class="prog"><i id="pb"></i></div><div class="err" id="e"></div><button class="btn full" id="sb" onclick="submitTask()">Submit homework</button></div>`);
   hw.sections.forEach((s, si) => { if (s.type === 'order') s.items.forEach((it, i) => drawOrd(si + '.' + i, si, i)); });
   prog();
 }
 
+const INL = t => t === 'cloze' || t === 'dragcloze' || t === 'choicetext';   // вправи, де відповіді вписуються прямо в текст
+function inlineHTML(s, si) {
+  if (s.type === 'cloze') return clozeHTML(s, si);
+  if (s.type === 'dragcloze') return `<div id="dz${si}">${dragInner(s, si)}</div>`;
+  return choiceHTML(s, si);
+}
+function choiceHTML(s, si) {   // вибір слова зі списку прямо в реченні
+  return '<div class="cloze">' + rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((part, n) => {
+    if (n % 2 === 0) return part;
+    const k = si + '.' + part, v = S.ans[k] || '';
+    return `<select class="gapsel" onchange="setAns('${k}',this.value)"><option value="">…</option>${s.choices[Number(part)].map(o => `<option value="${esc(o)}" ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+  }).join('') + '</div>';
+}
+/* перетягування слів у текст: блок слів над текстом; працює і перетягуванням, і дотиком (слово → пропуск) */
+let DRAG = null;
+function dragInner(s, si) {
+  const used = s.bank.map(() => false);
+  s.items.forEach((_, i) => { const v = S.ans[si + '.' + i]; if (!v) return; const n = s.bank.findIndex((w, j) => !used[j] && w === v); if (n >= 0) used[n] = true; });
+  const pk = S.pick && S.pick.si === si ? S.pick.n : -1;
+  const bank = s.bank.map((w, n) => used[n] ? '' : `<span class="wchip ${n === pk ? 'sel' : ''}" draggable="true" ondragstart="dragStart(event,${si},${n})" onclick="pickBank(${si},${n})">${esc(w)}</span>`).join('');
+  const txt = rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((part, n) => {
+    if (n % 2 === 0) return part;
+    const i = Number(part), v = S.ans[si + '.' + i] || '';
+    return `<span class="dgap ${v ? 'filled' : ''}" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="dropGap(event,${si},${i})" onclick="tapGap(${si},${i})">${v ? esc(v) : (i + 1)}</span>`;
+  }).join('');
+  return `<div class="bank">${bank || '<span class="mut">All words are placed ✓</span>'}</div><div class="cloze">${txt}</div><div class="mut">${pk >= 0 ? 'Now tap a gap to place the word.' : 'Drag a word into a gap, or tap a word and then a gap. Tap a placed word to take it back.'}</div>`;
+}
+const redrawDrag = si => { const el = $('dz' + si); if (el) el.innerHTML = dragInner(S.task.hw.sections[si], si); };
+function dragStart(e, si, n) { DRAG = { si, n }; try { e.dataTransfer.setData('text/plain', String(n)); e.dataTransfer.effectAllowed = 'move'; } catch (x) {} }
+function placeWord(si, i, n) { setAns(si + '.' + i, S.task.hw.sections[si].bank[n]); S.pick = null; redrawDrag(si); }
+function dropGap(e, si, i) { e.preventDefault(); if (DRAG && DRAG.si === si) placeWord(si, i, DRAG.n); DRAG = null; }
+function pickBank(si, n) { S.pick = (S.pick && S.pick.si === si && S.pick.n === n) ? null : { si, n }; redrawDrag(si); }
+function tapGap(si, i) {
+  if (S.pick && S.pick.si === si) return placeWord(si, i, S.pick.n);
+  if (S.ans[si + '.' + i]) { setAns(si + '.' + i, ''); redrawDrag(si); }
+}
 function clozeHTML(s, si) {
   return '<div class="cloze">' + rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((part, n) => {
     if (n % 2 === 0) return part;
@@ -355,10 +397,10 @@ function reviewItem(s, si, it, i, d) {
 }
 function reviewHTML(hw, by) {
   return hw.sections.map((s, si) => {
-    const body = s.type === 'cloze'
+    const body = INL(s.type)
       ? '<div class="cloze">' + rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((p, n) => n % 2 === 0 ? p : ansChip(by[si + '.' + p])).join('') + '</div>'
       : s.items.map((it, i) => reviewItem(s, si, it, i, by[si + '.' + i])).join('');
-    return `<div class="card">${head(s, si)}${s.type !== 'cloze' && s.text ? `<div class="txt">${rich(s.text)}</div>` : ''}${body}</div>`;
+    return `<div class="card">${head(s, si)}${!INL(s.type) && s.text ? `<div class="txt">${rich(s.text)}</div>` : ''}${body}</div>`;
   }).join('');
 }
 function showResult(r, hw, replace) {

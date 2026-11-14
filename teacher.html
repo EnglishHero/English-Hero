@@ -25,6 +25,7 @@ input,select,textarea{width:100%;padding:9px 11px;border:1px solid #c5d0c8;borde
 textarea{min-height:120px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px;line-height:1.55;resize:vertical}
 input[type=checkbox]{width:auto;margin-right:8px}.opt2{display:block;padding:9px 12px;border:1px solid var(--line);border-radius:10px;margin:6px 0;background:#fbfdfb}
 .fold{border:1px solid var(--line);border-radius:12px;margin:10px 0;background:#fff}.fold>summary{cursor:pointer;padding:12px 14px;font-weight:700;list-style:none}.fold>summary::-webkit-details-marker{display:none}
+.fold.sub{margin:6px 12px 10px;background:#fbfdfb}.fold.sub>summary{font-weight:600}
 .tb{display:block;margin:2px 0 6px}.tb .btn{margin-right:4px;min-width:38px}
 label.f{display:block;font-weight:600;margin:10px 0 4px;font-size:14px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:1 1 180px}.row>.btn{flex:0 0 auto}
@@ -43,7 +44,7 @@ th{background:#eef3ef}tr.c{cursor:pointer}tr.c:hover{background:#f3f8f4}
 const LOGO = 'data:image/png;base64,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';
 document.getElementById('hl').src = LOGO; document.getElementById('fav').href = LOGO;
 const API = 'https://script.google.com/macros/s/AKfycbypTCriq9XGozFB5SwO_dYvxCtBjvNZE1qWUAXcErA5PFTZoxtDr1nZoaSHTvpvPiH1/exec';   /* той самий URL, що й в index.html */
-const T = { token: null, tab: 'groups', groups: [], hws: [], asg: [], res: [], E: null, hwCache: {}, decks: [], da: [], D: null };
+const T = { token: null, tab: 'groups', groups: [], hws: [], asg: [], res: [], E: null, hwCache: {}, decks: [], da: [], D: null, open: {}, mv: null };
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 /* дозволене форматування: <b>жирний</b>, <i>курсив</i>, <u>підкреслений</u>; усе інше екранується */
@@ -115,19 +116,20 @@ const addSt = gi => run(async () => { const n = await api('addStudents', { group
 const rmSt = (gi, si) => confirm('Видалити учня зі списку?') && run(async () => { await api('removeStudent', { group: T.groups[gi].name, name: T.groups[gi].students[si] }); await refresh(); });
 
 /* ---------- Завдання (редактор + імпорт) ---------- */
+const INL = t => ['cloze', 'dragcloze', 'choicetext'].indexOf(t) >= 0;   // відповіді вписуються прямо в текст
 const TYPES = { choice: 'Multiple choice', gap: 'Gap filling', wordform: 'Word formation', match: 'Matching', transform: 'Sentence transformation',
-  cloze: 'Текст із пропусками (суцільний текст)', order: 'Word order', tf: 'True / False', error: 'Error correction', reading: 'Reading comprehension', listening: 'Listening', open: 'Open-ended', translation: 'Translation' };
-const HINT = { cloze: '', choice: 'Питання :: правильна відповідь :: варіант1 ; варіант2 ; варіант3', gap: 'She ___ (go) to school. :: goes', wordform: 'He is very ___. (SUCCESS) :: successful',
+  cloze: 'Текст із пропусками (суцільний текст)', dragcloze: 'Перетягування слів у текст', choicetext: 'Вибір слова в тексті / реченнях', order: 'Word order', tf: 'True / False', error: 'Error correction', reading: 'Reading comprehension', listening: 'Listening', open: 'Open-ended', translation: 'Translation' };
+const HINT = { cloze: '', dragcloze: '', choicetext: '', choice: 'Питання :: правильна відповідь :: варіант1 ; варіант2 ; варіант3', gap: 'She ___ (go) to school. :: goes', wordform: 'He is very ___. (SUCCESS) :: successful',
   match: 'слово :: переклад/визначення', transform: 'Речення. Keyword: X :: правильний варіант|інший допустимий', order: 'Повне правильне речення (слова перемішаються автоматично)',
   tf: 'Твердження :: True', error: 'Речення з помилкою :: виправлене речення', reading: 'Питання :: відповідь  (або з варіантами :: ... :: a ; b ; c)',
   listening: 'Питання :: відповідь  (або з варіантами :: ... :: a ; b ; c)', open: 'Питання (перевіряє викладач)', translation: 'Речення :: переклад|варіант' };
-const newSec = () => ({ type: 'choice', title: '', instructions: '', text: '', imageUrl: '', audioUrl: '', lines: '', pts: 1 });
+const newSec = () => ({ type: 'choice', title: '', instructions: '', text: '', imageUrl: '', audioUrl: '', lines: '', pts: 1, extra: '' });
 
 function fromLines(s) {
   const L = s.lines.split('\n').map(x => x.trim()).filter(Boolean), o = { type: s.type, title: s.title, instructions: s.instructions };
   ['text', 'imageUrl', 'audioUrl'].forEach(k => { if (s[k]) o[k] = s[k]; });
   const pts = Number(s.pts) || 1;
-  if (s.type === 'cloze') { o.points = pts; return o; }
+  if (INL(s.type)) { o.points = pts; if (s.type === 'dragcloze') o.extra = s.extra || ''; return o; }
   if (s.type === 'match') o.pairs = L.map(l => { const p = l.split('::').map(x => x.trim()); return { l: p[0], r: p[1] || '', points: pts }; });
   else o.items = L.map(l => {
     const p = l.split('::').map(x => x.trim()), it = { q: p[0], points: pts };
@@ -142,7 +144,7 @@ function fromLines(s) {
 }
 function toSec(o) {
   const s = Object.assign(newSec(), { type: o.type, title: o.title || '', instructions: o.instructions || '', text: o.text || '', imageUrl: o.imageUrl || '', audioUrl: o.audioUrl || '' });
-  if (o.type === 'cloze') { s.pts = o.points || 1; }
+  if (INL(o.type)) { s.pts = o.points || 1; s.extra = o.extra || ''; }
   else if (o.type === 'match') { s.lines = (o.pairs || []).map(p => p.l + ' :: ' + p.r).join('\n'); s.pts = (o.pairs[0] || {}).points || 1; }
   else { s.pts = ((o.items || [])[0] || {}).points || 1;
     s.lines = (o.items || []).map(i => o.type === 'order' ? i.answer : [i.q, [].concat(i.answer == null ? '' : i.answer).join('|'), (i.options || []).join(' ; ')].join(' :: ').replace(/( :: )+$/, '')).join('\n'); }
@@ -150,42 +152,85 @@ function toSec(o) {
 }
 
 const unitSort = (a, b) => !a ? 1 : !b ? -1 : a.localeCompare(b, undefined, { numeric: true });
-function folders(items, rowFn, addFn) {   // папка на кожен юніт
-  const us = Array.from(new Set(items.map(x => x.unit || ''))).sort(unitSort);
-  return us.map(u => { const its = items.filter(x => (x.unit || '') === u);
-    return `<details class="fold" open><summary>📁 ${esc(u || 'Без юніта')} <span class="tag">${its.length}</span></summary>${its.map(rowFn).join('')}<p style="padding:0 14px"><button class="btn alt sm" onclick="${addFn}('${encodeURIComponent(u)}')">+ Додати в цей юніт</button></p></details>`; }).join('') || '<div class="mut">Поки порожньо</div>';
+const enc = encodeURIComponent, dec = decodeURIComponent;
+function fold(key, cls, title, count, inner) {   // папка; відкритий/закритий стан запам'ятовується
+  return `<details class="fold ${cls}" data-k="${esc(key)}" ${T.open[key] ? 'open' : ''} ontoggle="T.open[this.dataset.k]=this.open"><summary>${title} <span class="tag">${count}</span></summary>${inner}</details>`;
 }
-const hwRowT = h => `<div class="row" style="padding:6px 14px;border-top:1px solid var(--line)"><div>${esc(h.title)}<div class="mut">${esc(h.created)}</div></div><button class="btn alt sm" onclick="editHw('${h.id}')">Редагувати</button><button class="btn red sm" onclick="delHw('${h.id}')">Видалити</button></div>`;
-const deckRowT = d => `<div class="row" style="padding:6px 14px;border-top:1px solid var(--line)"><div>${esc(d.title)} <span class="tag">${d.count} слів · ${d.blocks} бл.</span></div><button class="btn alt sm" onclick="editDeck('${d.id}')">Редагувати</button><button class="btn red sm" onclick="delDeck('${d.id}')">Видалити</button></div>`;
-const newHwIn = u => { T.E = { title: '', unit: decodeURIComponent(u), sections: [newSec()] }; drawEd(); if ($('ed')) $('ed').scrollIntoView({ behavior: 'smooth' }); };
-function newUnitHw() { const u = prompt('Назва нового юніта (напр. Unit 4):'); if (u && u.trim()) newHwIn(encodeURIComponent(u.trim())); }
-const newDeckIn = u => { T.D = { title: '', unit: decodeURIComponent(u), lines: '' }; drawDeckEd(); if ($('ded')) $('ded').scrollIntoView({ behavior: 'smooth' }); };
-function newUnitDeck() { const u = prompt('Назва нового юніта (напр. Unit 4):'); if (u && u.trim()) newDeckIn(encodeURIComponent(u.trim())); }
+function groupBuckets(items) {   // основні папки = групи; "Без групи" лише якщо є що показати
+  const gs = T.groups.map(g => g.name), loose = items.filter(x => !x.group || gs.indexOf(x.group) < 0);
+  return gs.map(g => ({ g, its: items.filter(x => x.group === g) })).concat(loose.length ? [{ g: '', its: loose }] : []);
+}
+const hwRowT = h => `<div class="row" style="padding:6px 14px;border-top:1px solid var(--line)"><div>${esc(h.title)}<div class="mut">${esc(h.created)}</div></div><button class="btn alt sm" onclick="editHw('${h.id}')">Редагувати</button><button class="btn alt sm" onclick="moveItem('hw','${h.id}')">Перемістити</button><button class="btn red sm" onclick="delHw('${h.id}')">Видалити</button></div>`;
+const deckRowT = d => `<div class="row" style="padding:6px 14px;border-top:1px solid var(--line)"><div>${d.unit ? '<b>' + esc(d.unit) + '</b> · ' : ''}${esc(d.title)} <span class="tag">${d.count} слів · ${d.blocks} бл.</span></div><button class="btn alt sm" onclick="editDeck('${d.id}')">Редагувати</button><button class="btn alt sm" onclick="moveItem('deck','${d.id}')">Перемістити</button><button class="btn red sm" onclick="delDeck('${d.id}')">Видалити</button></div>`;
+function hwTree() {   // група → юніт → вправи
+  return groupBuckets(T.hws).map(({ g, its }) => {
+    const us = Array.from(new Set(its.map(h => h.unit || ''))).sort(unitSort);
+    const inner = (us.map(u => { const l = its.filter(h => (h.unit || '') === u);
+      return fold('hw|' + g + '|' + u, 'sub', '📂 ' + esc(u || 'Без юніта'), l.length, l.map(hwRowT).join('') + `<p style="padding:0 14px"><button class="btn alt sm" onclick="newHwIn('${enc(g)}','${enc(u)}')">+ Додати вправу в цей юніт</button></p>`); }).join('')
+      || '<div class="mut" style="padding:0 14px 8px">Поки немає вправ</div>') + (g ? `<p style="padding:0 14px"><button class="btn alt sm" onclick="newUnitHw('${enc(g)}')">+ Новий юніт у цій групі</button></p>` : '');
+    return fold('hwg|' + g, '', '📁 ' + esc(g || 'Без групи'), its.length, inner);
+  }).join('') || '<div class="mut">Спочатку створіть групу на вкладці «Групи й учні»</div>';
+}
+function deckTree() {   // група → список юнітів (наборів)
+  return groupBuckets(T.decks).map(({ g, its }) => {
+    const l = its.slice().sort((a, b) => unitSort(a.unit || '', b.unit || '') || a.title.localeCompare(b.title));
+    return fold('dkg|' + g, '', '📁 ' + esc(g || 'Без групи'), l.length, (l.map(deckRowT).join('') || '<div class="mut" style="padding:0 14px 8px">Поки немає наборів</div>') + (g ? `<p style="padding:0 14px"><button class="btn alt sm" onclick="newUnitDeck('${enc(g)}')">+ Новий юніт (набір) у цій групі</button></p>` : ''));
+  }).join('') || '<div class="mut">Спочатку створіть групу на вкладці «Групи й учні»</div>';
+}
+const newHwIn = (g, u) => { T.E = { title: '', unit: dec(u), group: dec(g), sections: [newSec()] }; drawEd(); if ($('ed')) $('ed').scrollIntoView({ behavior: 'smooth' }); };
+function newUnitHw(g) { const u = prompt('Назва нового юніта (напр. Unit 4):'); if (u && u.trim()) newHwIn(g, enc(u.trim())); }
+function newUnitDeck(g) { const u = prompt('Назва нового юніта (напр. Unit 4):'); if (u && u.trim()) { T.D = { title: u.trim(), unit: u.trim(), group: dec(g), lines: '' }; drawDeckEd(); if ($('ded')) $('ded').scrollIntoView({ behavior: 'smooth' }); } }
+
+/* переміщення завдань і наборів між папками */
+function moveItem(kind, id) {
+  const it = (kind === 'hw' ? T.hws : T.decks).find(x => x.id === id); if (!it) return;
+  T.mv = { kind, id, title: it.title, group: it.group || '', unit: it.unit || '' }; drawMove();
+}
+function drawMove() {
+  const m = T.mv; if (!m || !$('mv')) return;
+  $('mv').innerHTML = `<div class="card" style="border-color:var(--g)"><h2>Перемістити «${esc(m.title)}»</h2><div class="row"><div><label class="f">У групу (папку)</label>${groupSel('T.mv', m.group)}</div>
+    <div><label class="f">Юніт</label><input list="ul2" value="${esc(m.unit)}" oninput="T.mv.unit=this.value"><datalist id="ul2">${units().map(u => `<option value="${esc(u)}">`).join('')}</datalist></div></div>
+    <p><button class="btn" onclick="doMove()">Перемістити</button> <button class="btn alt" onclick="T.mv=null;$('mv').innerHTML=''">Скасувати</button></p></div>`;
+  $('mv').scrollIntoView({ behavior: 'smooth' });
+}
+const doMove = () => run(async () => {
+  const m = T.mv; await api(m.kind === 'hw' ? 'moveHomework' : 'moveDeck', { id: m.id, group: m.group, unit: m.unit });
+  if (m.kind === 'hw') { T.open['hwg|' + m.group] = true; T.open['hw|' + m.group + '|' + m.unit] = true; } else T.open['dkg|' + m.group] = true;
+  T.mv = null; await refresh(); toast('Переміщено');
+});
 
 function viewHw() {
-  $('tab').innerHTML = `<div class="card"><h2>Мої завдання</h2>${folders(T.hws, hwRowT, 'newHwIn')}
-    <p><button class="btn" onclick="T.E={title:'',unit:'',sections:[newSec()]};drawEd()">+ Нове завдання</button> <button class="btn alt" onclick="newUnitHw()">+ Новий юніт</button></p></div><div id="ed"></div>
+  $('tab').innerHTML = `<div class="card"><h2>Мої завдання</h2><div class="mut">Папки: група → юніт → вправи. Відкривається лише та папка, яку ви натиснули.</div>${hwTree()}
+    <p><button class="btn" onclick="T.E={title:'',unit:'',group:'',sections:[newSec()]};drawEd()">+ Нове завдання</button></p></div><div id="mv"></div><div id="ed"></div>
     <div class="card"><h2>Імпорт із Claude (JSON)</h2><textarea id="imp" placeholder='{"title":"...","unit":"Unit 1","sections":[...]}'></textarea>
     <p><button class="btn" onclick="impHw()">Імпортувати в редактор</button></p></div>`;
   if (T.E) drawEd();
 }
-const editHw = id => run(async () => { const h = await api('getHomework', { id }); T.E = { id: h.id, title: h.title, unit: h.unit || '', sections: h.sections.map(toSec) }; drawEd(); });
+const editHw = id => run(async () => { const h = await api('getHomework', { id }); T.E = { id: h.id, title: h.title, unit: h.unit || '', group: (T.hws.find(x => x.id === id) || {}).group || '', sections: h.sections.map(toSec) }; drawEd(); });
 function impHw() { run(async () => {
   const h = JSON.parse($('imp').value.replace(/^```json|```$/g, '').trim());
   if (!h.title || !Array.isArray(h.sections)) throw new Error('У JSON має бути title і sections');
-  T.E = { id: h.id, title: h.title, unit: h.unit || '', sections: h.sections.map(toSec) }; drawEd(); toast('Завантажено в редактор — перевірте й збережіть'); }); }
+  T.E = { id: h.id, title: h.title, unit: h.unit || '', group: '', sections: h.sections.map(toSec) }; drawEd(); toast('Завантажено в редактор — перевірте й збережіть'); }); }
 
+function textLabel(s) {
+  if (s.type === 'cloze') return '<label class="f">Текст із пропусками <span class="mut">— правильну відповідь пишіть у подвійних дужках одразу в тексті: <b>{{isolation}}</b>; кілька варіантів через |: <b>{{behaviour|behavior}}</b>. Підказку в дужках, напр. (ISOLATE), залишайте поруч.</span></label>';
+  if (s.type === 'dragcloze') return '<label class="f">Текст для перетягування слів <span class="mut">— правильне слово пишіть у подвійних дужках: <b>She {{went}} home.</b> Варіанти через |: <b>{{colour|color}}</b>. Блок зі словами над текстом збирається з відповідей автоматично.</span></label>';
+  if (s.type === 'choicetext') return '<label class="f">Текст із вибором слова <span class="mut">— варіанти в подвійних дужках через |, правильний позначте зірочкою: <b>She {{is*|are|am}} happy.</b> Можна писати кілька речень, у кожному свій вибір.</span></label>';
+  return '<label class="f">Текст (для reading, за потреби)</label>';
+}
+const groupSel = (obj, cur) => `<select onchange="${obj}.group=this.value"><option value="">Без групи</option>${T.groups.map(g => `<option ${g.name === cur ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select>`;
 function drawEd() {
   const E = T.E; if (!E || !$('ed')) return;
   $('ed').innerHTML = `<div class="card"><h2>Редактор</h2><label class="f">Назва завдання</label><input value="${esc(E.title)}" oninput="T.E.title=this.value">
+  <label class="f">Група (папка)</label>${groupSel('T.E', E.group)}
   <label class="f">Юніт <span class="mut">(необов’язково, напр. Unit 3 — учні бачать завдання згруповані за юнітами)</span></label><input list="ul" value="${esc(E.unit || '')}" oninput="T.E.unit=this.value"><datalist id="ul">${units().map(u => `<option value="${esc(u)}">`).join('')}</datalist>
   ${E.sections.map((s, i) => `<div class="sec"><div class="row"><select onchange="secSet(${i},'type',this.value,1)">${Object.keys(TYPES).map(k => `<option value="${k}" ${k === s.type ? 'selected' : ''}>${TYPES[k]}</option>`).join('')}</select>
     <input placeholder="Заголовок секції" value="${esc(s.title)}" oninput="secSet(${i},'title',this.value)"><input type="number" min="1" style="max-width:90px" title="Балів за питання" value="${s.pts}" oninput="secSet(${i},'pts',this.value)"><button class="btn red sm" onclick="T.E.sections.splice(${i},1);drawEd()">✕</button></div>
     <label class="f">Інструкція</label>${bar(i, 'instructions')}<input id="sx${i}_instructions" onkeydown="kd(event,${i},'instructions')" value="${esc(s.instructions)}" oninput="secSet(${i},'instructions',this.value)">
-    ${s.type === 'cloze' ? '<label class="f">Текст із пропусками <span class="mut">— правильну відповідь пишіть у подвійних дужках одразу в тексті: <b>{{isolation}}</b>; кілька варіантів через |: <b>{{behaviour|behavior}}</b>. Підказку в дужках, напр. (ISOLATE), залишайте поруч.</span></label>' : '<label class="f">Текст (для reading, за потреби)</label>'}${bar(i, 'text')}<textarea id="sx${i}_text" onkeydown="kd(event,${i},'text')" style="font-family:inherit;font-size:16px;min-height:${s.type === 'cloze' ? 320 : 160}px" oninput="secSet(${i},'text',this.value);autoH(this)">${esc(s.text)}</textarea>
+    ${textLabel(s)}${bar(i, 'text')}<textarea id="sx${i}_text" onkeydown="kd(event,${i},'text')" style="font-family:inherit;font-size:16px;min-height:${INL(s.type) ? 320 : 160}px" oninput="secSet(${i},'text',this.value);autoH(this)">${esc(s.text)}</textarea>${s.type === 'dragcloze' ? `<label class="f">Зайві слова (необов’язково, через кому) <span class="mut">— додаються до блоку слів як відволікаючі</span></label><input value="${esc(s.extra || '')}" oninput="secSet(${i},'extra',this.value)">` : ''}
     <div class="row"><div><label class="f">Посилання на зображення (Google Drive / URL)</label><input value="${esc(s.imageUrl)}" oninput="secSet(${i},'imageUrl',this.value)"></div>
     <div><label class="f">Посилання на аудіо (Google Drive / URL)</label><input value="${esc(s.audioUrl)}" oninput="secSet(${i},'audioUrl',this.value)"></div></div>
-    ${s.type === 'cloze' ? '' : `<label class="f">Питання — по одному в рядку <span class="mut">(${esc(HINT[s.type])})</span></label>${bar(i, 'lines')}<textarea id="sx${i}_lines" onkeydown="kd(event,${i},'lines')" style="min-height:220px" oninput="secSet(${i},'lines',this.value);autoH(this)">${esc(s.lines)}</textarea>`}</div>`).join('')}
+    ${INL(s.type) ? '' : `<label class="f">Питання — по одному в рядку <span class="mut">(${esc(HINT[s.type])})</span></label>${bar(i, 'lines')}<textarea id="sx${i}_lines" onkeydown="kd(event,${i},'lines')" style="min-height:220px" oninput="secSet(${i},'lines',this.value);autoH(this)">${esc(s.lines)}</textarea>`}</div>`).join('')}
   <div class="row"><button class="btn alt" onclick="T.E.sections.push(newSec());drawEd()">+ Секція</button><button class="btn" onclick="saveHw()">Зберегти завдання</button></div></div>`;
   document.querySelectorAll('#ed textarea').forEach(autoH);
 }
@@ -205,15 +250,15 @@ function kd(e, i, f) { if ((e.ctrlKey || e.metaKey) && e.key.length === 1 && 'bi
 function autoH(el) { if (el.tagName === 'TEXTAREA') { el.style.height = 'auto'; el.style.height = Math.max(el.scrollHeight + 2, parseInt(el.style.minHeight) || 120) + 'px'; } }
 const saveHw = () => run(async () => {
   const E = T.E; if (!E.title.trim()) throw new Error('Введіть назву');
-  const id = await api('saveHomework', { hw: { id: E.id, title: E.title, unit: E.unit || '', sections: E.sections.map(fromLines) } });
-  T.hwCache = {}; T.E = null; await refresh(); toast('Збережено');
+  const id = await api('saveHomework', { hw: { id: E.id, title: E.title, unit: E.unit || '', group: E.group || '', sections: E.sections.map(fromLines) } });
+  T.open['hwg|' + (E.group || '')] = true; T.open['hw|' + (E.group || '') + '|' + (E.unit || '')] = true; T.hwCache = {}; T.E = null; await refresh(); toast('Збережено');
 });
 
 /* ---------- Призначити: відкриття окремих завдань групі ---------- */
 const units = () => Array.from(new Set(T.hws.map(h => h.unit).concat(T.decks.map(d => d.unit)).filter(Boolean))).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 function viewAsg() {
   $('tab').innerHTML = `<div class="card"><h2>Відкрити завдання групі</h2><div class="mut">Файл завдання може містити кілька завдань (секцій). Відкривайте їх групі поступово — учні бачать лише відкриті.</div>
-    <div class="row" style="margin-top:10px"><select id="ah" onchange="asgPick()">${T.hws.map(h => `<option value="${h.id}">${esc((h.unit ? h.unit + ' · ' : '') + h.title)}</option>`).join('')}</select>
+    <div class="row" style="margin-top:10px"><select id="ah" onchange="asgPick()">${T.hws.map(h => `<option value="${h.id}">${esc((h.group ? h.group + ' › ' : '') + (h.unit ? h.unit + ' · ' : '') + h.title)}</option>`).join('')}</select>
     <select id="ag" onchange="asgPick()">${T.groups.map(g => `<option>${esc(g.name)}</option>`).join('')}</select>
     <input type="date" id="ad" title="Дедлайн (необов’язково)"></div><div id="asec" style="margin-top:10px" class="mut">${T.hws.length && T.groups.length ? 'Завантаження…' : 'Спочатку створіть завдання та групу'}</div></div>
     <div class="card"><h2>Відкриті завдання</h2><div class="scroll"><table><tr><th>Юніт</th><th>Завдання</th><th>Група</th><th>Відкрито</th><th>Дедлайн</th><th></th></tr>${T.asg.map(a => `<tr><td>${esc(a.unit) || '—'}</td><td>${esc(a.title)}</td><td>${esc(a.group)}</td><td>${a.sections ? 'завд. ' + a.sections.join(', ') : 'усі'}</td><td>${esc(a.deadline) || '—'}</td><td><button class="btn red sm" onclick="delAsg('${a.id}')">Закрити</button></td></tr>`).join('')}</table></div></div>`;
@@ -243,12 +288,12 @@ const delGroup = gi => confirm('Видалити групу, її учнів і 
 
 /* ---------- Флешкартки: блоки слів + поступове відкриття ---------- */
 function viewDecks() {
-  $('tab').innerHTML = `<div class="card"><h2>Набори флешкарток</h2>${folders(T.decks, deckRowT, 'newDeckIn')}
-    <p><button class="btn" onclick="T.D={title:'',unit:'',lines:''};drawDeckEd()">+ Новий набір</button> <button class="btn alt" onclick="newUnitDeck()">+ Новий юніт</button></p></div><div id="ded"></div>
+  $('tab').innerHTML = `<div class="card"><h2>Набори флешкарток</h2><div class="mut">Папки: група → список юнітів (наборів). Набір можна перемістити в іншу групу кнопкою «Перемістити».</div>${deckTree()}
+    <p><button class="btn" onclick="T.D={title:'',unit:'',group:'',lines:''};drawDeckEd()">+ Новий набір</button></p></div><div id="mv"></div><div id="ded"></div>
     <div class="card"><h2>Імпорт із Claude (JSON)</h2><textarea id="dimp" style="min-height:140px" placeholder='{"title":"...","unit":"Unit 1","blocks":[{"title":"Block 1","cards":[{"front":"red","back":"червоний","example":"A red apple."}]}]}'></textarea>
     <p><button class="btn" onclick="impDeck()">Імпортувати в редактор</button></p></div>
     <div class="card"><h2>Відкрити блоки слів групі</h2><div class="mut">Позначені блоки учні бачать, зняті — ні. Щоб додати нові слова до старих, позначте наступний блок; щоб прибрати — зніміть позначку.</div>
-    <div class="row" style="margin-top:10px"><select id="dsel" onchange="deckPick()">${T.decks.map(d => `<option value="${d.id}">${esc((d.unit ? d.unit + ' · ' : '') + d.title)}</option>`).join('')}</select>
+    <div class="row" style="margin-top:10px"><select id="dsel" onchange="deckPick()">${T.decks.map(d => `<option value="${d.id}">${esc((d.group ? d.group + ' › ' : '') + (d.unit ? d.unit + ' · ' : '') + d.title)}</option>`).join('')}</select>
     <select id="dgrp" onchange="deckPick()">${T.groups.map(g => `<option>${esc(g.name)}</option>`).join('')}</select></div><div id="dbl" style="margin-top:10px" class="mut">${T.decks.length && T.groups.length ? 'Завантаження…' : 'Спочатку створіть набір і групу'}</div></div>
     <div class="card"><h2>Доступ груп до наборів</h2><div class="scroll"><table><tr><th>Набір</th><th>Група</th><th>Відкриті блоки</th><th></th></tr>${T.da.map(a => `<tr><td>${esc(a.title)}</td><td>${esc(a.group)}</td><td>${a.released ? a.released.join(', ') + ' з ' + a.total : 'усі'}</td><td><button class="btn red sm" onclick="delDa('${a.id}')">Закрити</button></td></tr>`).join('')}</table></div></div>`;
   if (T.D) drawDeckEd();
@@ -271,6 +316,7 @@ const saveAccess = () => run(async () => {
 function drawDeckEd() {
   if (!T.D || !$('ded')) return;
   $('ded').innerHTML = `<div class="card"><h2>Редактор набору</h2><label class="f">Назва набору</label><input value="${esc(T.D.title)}" oninput="T.D.title=this.value">
+    <label class="f">Група (папка)</label>${groupSel('T.D', T.D.group)}
     <label class="f">Юніт <span class="mut">(необов’язково)</span></label><input list="ul" value="${esc(T.D.unit || '')}" oninput="T.D.unit=this.value"><datalist id="ul">${units().map(u => `<option value="${esc(u)}">`).join('')}</datalist>
     <label class="f">Слова <span class="mut">— картка в рядку: слово :: переклад :: приклад (приклад необов’язковий). Новий блок починається з рядка <b>#</b> і назви блоку. Варіанти слова — через |, напр. colour|color</span></label>
     <textarea style="min-height:280px" placeholder="# Block 1: Colours&#10;red :: червоний&#10;blue :: синій&#10;&#10;# Block 2: Animals&#10;dog :: пес :: I have a dog." oninput="T.D.lines=this.value">${esc(T.D.lines)}</textarea>
@@ -286,12 +332,12 @@ function impDeck() { run(async () => {
   const blocks = raw.map((b, n) => ({ title: s(b.title || b.name) || 'Block ' + (n + 1),
     cards: (b.cards || b.words || []).map(c => ({ front: s(c.front || c.word || c.en || c.english), back: s(c.back || c.translation || c.ua || c.uk), example: s(c.example || c.sentence) })).filter(c => c.front && c.back) })).filter(b => b.cards.length);
   if (!blocks.length) throw new Error('Не знайдено жодної картки зі словом і перекладом');
-  T.D = { title: s(j.title), unit: s(j.unit), lines: blocks.map(b => '# ' + b.title + '\n' + b.cards.map(c => [c.front, c.back, c.example].join(' :: ').replace(/( :: )+$/, '')).join('\n')).join('\n\n') };
+  T.D = { title: s(j.title), unit: s(j.unit), group: '', lines: blocks.map(b => '# ' + b.title + '\n' + b.cards.map(c => [c.front, c.back, c.example].join(' :: ').replace(/( :: )+$/, '')).join('\n')).join('\n\n') };
   drawDeckEd(); $('ded').scrollIntoView({ behavior: 'smooth' });
   toast('Завантажено ' + blocks.reduce((a, b) => a + b.cards.length, 0) + ' карток у блоках: ' + blocks.length + '. Перевірте й натисніть «Зберегти набір»');
 }); }
 const editDeck = id => run(async () => { const d = await api('getDeck', { id });
-  T.D = { id: d.id, title: d.title, unit: d.unit || '', lines: d.blocks.map(b => '# ' + b.title + '\n' + b.cards.map(c => [c.front, c.back, c.example || ''].join(' :: ').replace(/( :: )+$/, '')).join('\n')).join('\n\n') }; drawDeckEd(); });
+  T.D = { id: d.id, title: d.title, unit: d.unit || '', group: (T.decks.find(x => x.id === id) || {}).group || '', lines: d.blocks.map(b => '# ' + b.title + '\n' + b.cards.map(c => [c.front, c.back, c.example || ''].join(' :: ').replace(/( :: )+$/, '')).join('\n')).join('\n\n') }; drawDeckEd(); });
 const saveDk = () => run(async () => {
   const D = T.D; if (!D.title.trim()) throw new Error('Введіть назву набору');
   const blocks = []; let cur = null;
@@ -299,7 +345,7 @@ const saveDk = () => run(async () => {
     if (l[0] === '#') { cur = { title: l.replace(/^#+\s*/, '') || 'Block ' + (blocks.length + 1), cards: [] }; blocks.push(cur); }
     else { if (!cur) { cur = { title: 'Block 1', cards: [] }; blocks.push(cur); } const p = l.split('::').map(x => x.trim()); cur.cards.push({ front: p[0], back: p[1] || '', example: p[2] || '' }); }
   });
-  await api('saveDeck', { deck: { id: D.id, title: D.title.trim(), unit: D.unit || '', blocks: blocks.filter(b => b.cards.length) } }); T.D = null; await refresh(); toast('Набір збережено');
+  await api('saveDeck', { deck: { id: D.id, title: D.title.trim(), unit: D.unit || '', group: D.group || '', blocks: blocks.filter(b => b.cards.length) } }); T.open['dkg|' + (D.group || '')] = true; T.D = null; await refresh(); toast('Набір збережено');
 });
 const delDeck = id => confirm('Видалити набір разом з доступом груп?') && run(async () => { await api('deleteDeck', { id }); await refresh(); });
 const delDa = id => run(async () => { await api('deleteDeckAssign', { id }); await refresh(); toast('Закрито'); });
@@ -327,7 +373,7 @@ async function detail(i) { run(async () => {
   const q = (si, ii) => { const s = secAt(si); return s ? ((s.items || s.pairs || [])[ii] || {}) : {}; };
   const manualMax = r.details.filter(d => d.manual).reduce((a, d) => a + d.points, 0);
   $('rd').innerHTML = `<div class="card"><h2>${esc(r.student)} — ${esc(r.title)} (${r.percent}%)</h2>` + r.details.map(d => { const [si, ii] = d.key.split('.').map(Number), it = q(si, ii);
-    return `<div class="ans ${d.manual ? 'm' : d.ok ? 'y' : 'n'}"><div class="mut">${si + 1}.${ii + 1} ${rich(it.q || it.l || (secAt(si) && secAt(si).type === 'cloze' ? 'Пропуск ' + (ii + 1) : ''))}</div><div>Відповідь: <b>${esc(d.given) || '—'}</b></div>${d.manual ? '' : d.ok ? '' : `<div>Правильно: <b>${esc(d.correct)}</b></div>`}</div>`; }).join('') +
+    return `<div class="ans ${d.manual ? 'm' : d.ok ? 'y' : 'n'}"><div class="mut">${si + 1}.${ii + 1} ${rich(it.q || it.l || (secAt(si) && INL(secAt(si).type) ? 'Пропуск ' + (ii + 1) : ''))}</div><div>Відповідь: <b>${esc(d.given) || '—'}</b></div>${d.manual ? '' : d.ok ? '' : `<div>Правильно: <b>${esc(d.correct)}</b></div>`}</div>`; }).join('') +
     (manualMax ? `<div class="row" style="margin-top:10px"><div><label class="f">Бали за відкриті відповіді (0–${manualMax})</label><input type="number" id="ms" min="0" max="${manualMax}"></div><div><label class="f">Коментар учню</label><input id="mc" value="${esc(r.comment)}"></div><button class="btn" onclick="gradeM(${i})">Зберегти оцінку</button></div>` : '') + `<p><button class="btn red" onclick="delRes(${i})">Видалити цей результат (учень зможе виконати завдання знову)</button></p></div>`;
   $('rd').scrollIntoView({ behavior: 'smooth' }); }); }
 const delRes = i => confirm('Видалити цей результат? Учень зможе виконати завдання знову.') && run(async () => { const r = T.res[i]; await api('deleteSubmission', { row: r.row, assignmentId: r.assignmentId, student: r.student }); await loadRes(); toast('Результат видалено'); });
