@@ -86,6 +86,9 @@ img.pic{max-width:100%;border-radius:10px;margin:10px 0}
 .seg{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
 .seg button{border:1.5px solid var(--line);background:#fff;border-radius:20px;padding:7px 14px;font:inherit;font-size:15px;cursor:pointer}
 .seg button.on{background:var(--g);color:#fff;border-color:var(--g)}
+.tag.new{background:#ffdf7e;color:#5c3d00;font-weight:800;letter-spacing:.03em}
+.item.isnew{background:linear-gradient(90deg,#fff8e1,#fff 70%)}
+.nb{background:#d9382c;color:#fff;border-radius:10px;padding:0 7px;font-size:12px;font-weight:700;margin-left:6px}
 @media(max-width:480px){h1{font-size:25px}.herologo{width:140px;height:140px}.brand b{font-size:15px}}
 </style>
 </head>
@@ -123,7 +126,7 @@ function homeClick() { S.name ? showList() : goHome(); }
 function setNav() {
   const n = $('sn'); if (!S.name) { n.className = 'subnav'; n.innerHTML = ''; return; }
   n.className = 'subnav on';
-  const b = (f, l) => `<button class="${S.filter === f ? 'act' : ''}" onclick="goFilter('${f}')">${l}</button>`;
+  const b = (f, l) => { const k = newCount(f); return `<button class="${S.filter === f ? 'act' : ''}" onclick="goFilter('${f}')">${l}${k ? `<span class="nb">${k}</span>` : ''}</button>`; };
   n.innerHTML = b('all', '📚 My units') + b('hw', '📝 Homework') + b('deck', '🃏 Flashcards') + '<span class="sp"></span><button onclick="logout()">Log out</button>';
 }
 function goFilter(f) { S.filter = f; showList(); }
@@ -132,6 +135,16 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   del(k) { try { localStorage.removeItem(k); } catch (e) {} }
 };
+
+/* позначка NEW: опубліковано за останні 14 днів і учень ще не відкривав (зберігається на цьому пристрої) */
+const NEW_DAYS = 14;
+const seenKey = () => 'eh_seen_' + S.name + '_' + S.group;
+const seenSet = () => new Set(store.get(seenKey()) || []);
+function markSeen(keys) { const x = seenSet(); keys.forEach(k => x.add(k)); store.set(seenKey(), Array.from(x)); }
+function isRecent(d) { if (!d) return false; const t = Date.parse(d); return !isNaN(t) && (Date.now() - t) / 864e5 <= NEW_DAYS; }
+const newHw = a => !a.done && isRecent(a.created) && !seenSet().has('hw:' + a.id);
+const newBlocks = d => (d.blockList || []).filter(b => isRecent(b.date) && !seenSet().has('dk:' + d.id + ':' + b.n));
+const newCount = f => (f !== 'deck' ? S.list.filter(newHw).length : 0) + (f !== 'hw' ? S.decks.filter(d => newBlocks(d).length).length : 0);
 
 /* повідомлення сервера (українською) -> англійською для учня */
 const MSG = [
@@ -201,11 +214,13 @@ async function showList(skip) {
   if (d) { S.list = d.assignments; S.decks = d.decks || []; if (S.nav === token) renderList(); }
 }
 function hwRow(a) {
-  return `<div class="item"><div style="display:flex;align-items:flex-start"><span class="ic">📝</span><div><h3>${esc(a.title)}</h3><div class="mut">${a.parts && a.parts.length ? esc(a.parts.join(' · ')) + '<br>' : ''}${a.deadline ? 'Deadline: ' + esc(a.deadline) : 'No deadline'}</div></div></div>
+  const nw = newHw(a);
+  return `<div class="item ${nw ? 'isnew' : ''}"><div style="display:flex;align-items:flex-start"><span class="ic">📝</span><div><h3>${nw ? '<span class="tag new">NEW</span> ' : ''}${esc(a.title)}</h3><div class="mut">${a.parts && a.parts.length ? esc(a.parts.join(' · ')) + '<br>' : ''}${a.deadline ? 'Deadline: ' + esc(a.deadline) : 'No deadline'}</div></div></div>
     <div>${a.done ? `<span class="tag ${a.pending ? 'warn' : ''}">${a.pending ? 'Pending teacher check' : a.percent + '%'}</span> <button class="btn alt" onclick="openResult('${a.id}')">Result</button>` : `<button class="btn" onclick="openTask('${a.id}')">Start</button>`}</div></div>`;
 }
 function deckRow(d) {
-  return `<div class="item"><div style="display:flex;align-items:flex-start"><span class="ic">🃏</span><div><h3>${esc(d.title)}</h3><div class="mut">${d.count} words${d.blocks > 1 ? ' · ' + d.blocks + ' blocks' : ''}</div></div></div><button class="btn" onclick="openDeck('${d.id}')">Study</button></div>`;
+  const nb = newBlocks(d);
+  return `<div class="item ${nb.length ? 'isnew' : ''}"><div style="display:flex;align-items:flex-start"><span class="ic">🃏</span><div><h3>${nb.length ? '<span class="tag new">NEW</span> ' : ''}${esc(d.title)}</h3><div class="mut">${d.count} words${d.blocks > 1 ? ' · ' + d.blocks + ' blocks' : ''}${nb.length ? ' · <b>new: ' + esc(nb.map(x => x.title).join(', ')) + '</b>' : ''}</div></div></div><button class="btn" onclick="openDeck('${d.id}')">Study</button></div>`;
 }
 function renderList() {
   const f = S.filter || 'all', items = [];
@@ -214,8 +229,8 @@ function renderList() {
   const units = Array.from(new Set(items.map(x => x.u))).sort((a, b) => !a ? 1 : !b ? -1 : a.localeCompare(b, undefined, { numeric: true }));
   const last = units.filter(u => u).slice(-1)[0];
   app(`<h2>${{ all: 'My units', hw: 'My homework', deck: 'My flashcards' }[f]}</h2>` + (units.length ? units.map(u => {
-    const its = items.filter(x => x.u === u), open = units.length <= 2 || u === last || its.some(x => x.k === 'hw' && !x.a.done);
-    return `<details class="unit" ${open ? 'open' : ''}><summary><span>${esc(u || 'Other')}</span><span class="tag">${its.length}</span></summary>${its.map(x => x.k === 'hw' ? hwRow(x.a) : deckRow(x.d)).join('')}</details>`;
+    const its = items.filter(x => x.u === u), nn = its.filter(x => x.k === 'hw' ? newHw(x.a) : newBlocks(x.d).length > 0).length, open = units.length <= 2 || u === last || nn > 0 || its.some(x => x.k === 'hw' && !x.a.done);
+    return `<details class="unit" ${open ? 'open' : ''}><summary><span>${esc(u || 'Other')}</span>${nn ? `<span class="tag new">${nn} new</span>` : ''}<span class="tag">${its.length}</span></summary>${its.map(x => x.k === 'hw' ? hwRow(x.a) : deckRow(x.d)).join('')}</details>`;
   }).join('') : '<div class="card mut">Nothing here yet. Your teacher will add new material soon.</div>'));
 }
 function logout() { S.name = ''; S.group = ''; S.list = []; S.decks = []; store.del('eh_student'); hrep('list'); goHome(); }
@@ -225,7 +240,7 @@ async function openTask(id) {
   app('<div class="card mut">Loading…</div>');
   try {
     const d = await api('task', { name: S.name, group: S.group, assignmentId: id });
-    S.task = d; const dr = store.get('eh_draft_' + S.name + id) || {};
+    S.task = d; markSeen(['hw:' + id]); const dr = store.get('eh_draft_' + S.name + id) || {};
     S.ans = dr.ans || {}; S.ord = dr.ord || {};
     renderTask(); push('task');
   } catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Back</button>`); }
@@ -362,7 +377,7 @@ function showResult(r, hw, replace) {
 }
 
 /* ---------- Flashcards: різні режими + озвучка (безкоштовний голос браузера) ---------- */
-const F = { id: '', title: '', all: [], blocksData: [], scope: 'all', mode: '', queue: [], i: 0, flip: false, rev: false, wrong: [], right: 0, locked: false, opts: [], m: null, accent: store.get('eh_accent') || 'en-GB' };
+const F = { id: '', title: '', all: [], blocksData: [], newN: [], scope: 'all', mode: '', queue: [], i: 0, flip: false, rev: false, wrong: [], right: 0, locked: false, opts: [], m: null, accent: store.get('eh_accent') || 'en-GB' };
 const CAN_SPEAK = 'speechSynthesis' in window;
 const shuf = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const fnorm = s => String(s == null ? '' : s).toLowerCase().replace(/[’‘`]/g, "'").replace(/[.!?;,]+$/, '').replace(/\s+/g, ' ').trim();
@@ -386,7 +401,10 @@ function setAccent(v) { F.accent = v; store.set('eh_accent', v); }
 
 async function openDeck(id) {
   app('<div class="card mut">Loading…</div>');
-  try { const d = await api('deck', { name: S.name, group: S.group, deckId: id }); F.id = id; F.title = d.title; F.blocksData = d.blocks; F.all = [].concat.apply([], d.blocks.map(b => b.cards)); F.scope = 'all'; deckMenu(); push('deck'); }
+  try { const d = await api('deck', { name: S.name, group: S.group, deckId: id }); F.id = id; F.title = d.title; F.blocksData = d.blocks; F.all = [].concat.apply([], d.blocks.map(b => b.cards)); F.scope = 'all';
+    F.newN = d.blocks.filter(b => isRecent(b.date) && !seenSet().has('dk:' + id + ':' + b.n)).map(b => b.n);
+    markSeen(d.blocks.map(b => 'dk:' + id + ':' + b.n));
+    deckMenu(); push('deck'); }
   catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Back</button>`); }
 }
 const pool = () => F.scope === 'all' ? F.all : ((F.blocksData[F.scope] || {}).cards || F.all);
@@ -395,12 +413,12 @@ function deckMenu() {
   const modes = [
     ['flip', '🃏 Flashcards', 'Flip the cards and mark what you know'],
     ['mc', '✅ Multiple choice', 'Choose the correct translation'],
-    ['type', '✍️ Type the word', 'See the translation and write the English word'],
     ['listen', '🔊 Listen & type', 'Hear the word and spell it'],
     ['match', '🧩 Matching game', 'Connect English words with translations']
   ].filter(m => CAN_SPEAK || m[0] !== 'listen');
-  const seg = F.blocksData.length > 1 ? `<div class="mut" style="margin-top:14px">Words to practise:</div><div class="seg"><button class="${F.scope === 'all' ? 'on' : ''}" onclick="setScope('all')">All words (${F.all.length})</button>${F.blocksData.map((b, n) => `<button class="${F.scope === n ? 'on' : ''}" onclick="setScope(${n})">${esc(b.title)} (${b.cards.length})</button>`).join('')}</div>` : '';
-  app(`<a class="backl" onclick="back()">← Back to my units</a><h2>${esc(F.title)}</h2><div class="mut">${pool().length} words · choose how you want to practise</div>${seg}` +
+  const seg = F.blocksData.length > 1 ? `<div class="mut" style="margin-top:14px">Words to practise:</div><div class="seg"><button class="${F.scope === 'all' ? 'on' : ''}" onclick="setScope('all')">All words (${F.all.length})</button>${F.blocksData.map((b, n) => `<button class="${F.scope === n ? 'on' : ''}" onclick="setScope(${n})">${esc(b.title)} (${b.cards.length})${F.newN.indexOf(b.n) >= 0 ? ' 🆕' : ''}</button>`).join('')}</div>` : '';
+  const banner = F.newN.length ? `<div class="card" style="background:#fff8e1;border-color:#f2d675;margin-top:12px">🆕 <b>New:</b> ${esc(F.blocksData.filter(b => F.newN.indexOf(b.n) >= 0).map(b => b.title).join(', '))}</div>` : '';
+  app(`<a class="backl" onclick="back()">← Back to my units</a><h2>${esc(F.title)}</h2><div class="mut">${pool().length} words · choose how you want to practise</div>${banner}${seg}` +
     modes.map(m => `<button class="mode" onclick="startMode('${m[0]}')"><b>${m[1]}</b><span>${m[2]}</span></button>`).join('') +
     (CAN_SPEAK ? `<p class="mut">Voice: <select style="width:auto;padding:6px 10px" onchange="setAccent(this.value)"><option value="en-GB" ${F.accent === 'en-GB' ? 'selected' : ''}>British 🇬🇧</option><option value="en-US" ${F.accent === 'en-US' ? 'selected' : ''}>American 🇺🇸</option></select></p>` : ''));
 }
