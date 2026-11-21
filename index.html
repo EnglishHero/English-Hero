@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ENGLISH HERO</title>
 <link id="fav" rel="icon" href="data:,">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <style>
 :root{--g:#14532d;--g2:#1c6b3c;--gl:#eaf4ed;--bg:#f2f6f3;--line:#dde6df;--tx:#1b2a21;--mut:#66756b;--ok:#14703a;--bad:#c0261b;color-scheme:light}
 *{box-sizing:border-box}
@@ -115,7 +117,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp
 /* <b>, <i>, <u> дозволені, усе інше екранується */
 function rich(s) {
   const st = [];
-  const o = esc(s).replace(/&lt;(\/?)(b|i|u)&gt;/gi, (m, c, t) => {
+  const o = esc(s).replace(/&lt;(\/?)(b|i|u|s)&gt;/gi, (m, c, t) => {
     t = t.toLowerCase();
     if (!c) { st.push(t); return '<' + t + '>'; }
     const j = st.lastIndexOf(t); if (j < 0) return '';
@@ -174,13 +176,15 @@ async function api(action, data) {
   try { r = await fetch(API, { method: 'POST', body: JSON.stringify(Object.assign({ action }, data || {})) }); }
   catch (e) { throw new Error('No connection to the server. Check your internet and try again.'); }
   const j = await r.json();
-  if (!j.ok) throw new Error(tr(j.error));
+  if (!j.ok) { const er = new Error(tr(j.error)); er.raw = String(j.error || ''); throw er; }
   return j.data;
 }
 
 /* ---------- Home ---------- */
+let WARMED = false;
+function warmUp() { if (WARMED) return; WARMED = true; api('warm').catch(() => {}); }   // будить сервер заздалегідь
 function goHome() {
-  S.task = null; $('who').textContent = ''; setNav();
+  S.task = null; $('who').textContent = ''; setNav(); warmUp();
   app(`<section class="hero"><img class="herologo" src="${LOGO}" alt="English Hero"><h1>Welcome to English Hero!</h1>
   <p>Your online homework platform</p>
   <div class="btns"><button class="btn" onclick="studentLogin()">Student Login</button>
@@ -188,23 +192,25 @@ function goHome() {
 }
 
 /* ---------- Student login ---------- */
+const groupOpts = (list, sel, fresh) => (list && list.length) || fresh ? '<option value="">— select your group —</option>' + (list || []).map(g => `<option ${g === sel ? 'selected' : ''}>${esc(g)}</option>`).join('') : '<option>Loading…</option>';
 async function studentLogin(msg) {
   const saved = store.get('eh_student') || {};
   app(`<div class="card"><h2>Student Login</h2>
   <label class="f">Your first and last name</label><input type="text" id="n" value="${esc(saved.name)}" autocomplete="name">
-  <label class="f">Group</label><select id="g"><option>Loading…</option></select>
+  <label class="f">Group</label><select id="g">${groupOpts(store.get('eh_groups'), saved.group)}</select>
   <div class="err" id="e">${esc(msg)}</div>
   <p><button class="btn full" id="go" onclick="doLogin()">Log in</button></p></div>`);
   try {
     const gs = await api('publicGroups'); if (!$('g')) return;
-    $('g').innerHTML = '<option value="">— select your group —</option>' + gs.map(g => `<option ${g === saved.group ? 'selected' : ''}>${esc(g)}</option>`).join('');
+    store.set('eh_groups', gs);
+    const cur = $('g').value || saved.group; $('g').innerHTML = groupOpts(gs, cur, true);
   } catch (e) { if ($('e')) $('e').textContent = e.message; }
 }
 async function doLogin() {
   $('e').textContent = ''; $('go').disabled = true;
   try {
     const d = await api('login', { name: $('n').value, group: $('g').value });
-    S.name = d.name; S.group = d.group; S.list = d.assignments; S.decks = d.decks || [];
+    S.name = d.name; S.group = d.group; S.list = d.assignments; S.decks = d.decks || []; S.fetched = Date.now();
     store.set('eh_student', { name: S.name, group: S.group });
     showList(true);
   } catch (e) { $('e').textContent = e.message; $('go').disabled = false; }
@@ -215,9 +221,9 @@ async function showList(skip) {
   if (!S.name) return studentLogin();
   $('who').textContent = S.name + ' · ' + S.group; setNav();
   renderList(); const token = S.nav;
-  if (skip) return;
+  if (skip || Date.now() - (S.fetched || 0) < 60000) return;   // свіжі дані вже є — зайвий запит не потрібен
   const d = await api('login', { name: S.name, group: S.group }).catch(e => null);
-  if (d) { S.list = d.assignments; S.decks = d.decks || []; if (S.nav === token) renderList(); }
+  if (d) { S.list = d.assignments; S.decks = d.decks || []; S.fetched = Date.now(); if (S.nav === token) renderList(); }
 }
 function hwRow(a) {
   const nw = newHw(a);
@@ -246,12 +252,12 @@ async function openTask(id) {
   app('<div class="card mut">Loading…</div>');
   try {
     const d = await api('task', { name: S.name, group: S.group, assignmentId: id });
-    S.task = d; markSeen(['hw:' + id]); const dr = store.get('eh_draft_' + S.name + id) || {};
+    S.task = d; S.practice = null; markSeen(['hw:' + id]); const dr = store.get('eh_draft_' + S.name + id) || {};
     S.ans = dr.ans || {}; S.ord = dr.ord || {};
     renderTask(); push('task');
   } catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Back</button>`); }
 }
-const saveDraft = () => store.set('eh_draft_' + S.name + S.task.assignmentId, { ans: S.ans, ord: S.ord });
+const saveDraft = () => { if (!S.practice) store.set('eh_draft_' + S.name + S.task.assignmentId, { ans: S.ans, ord: S.ord }); };
 function setAns(k, v) { S.ans[k] = v; saveDraft(); prog(); }
 function prog() {
   if (!$('pg')) return;
@@ -270,11 +276,11 @@ const head = (s, si) => `<h3>${esc(s.title || 'Exercise ' + (si + 1))}</h3>${s.i
 function renderTask() {
   const hw = S.task.hw;
   S.total = hw.sections.reduce((a, s) => a + s.items.length, 0);
-  app(`<a class="backl" onclick="back()">← Back to my units</a><h2>${esc(hw.title)}</h2><div class="mut" style="margin-bottom:12px">${S.task.unit ? esc(S.task.unit) + ' · ' : ''}${S.task.deadline ? 'Deadline: ' + esc(S.task.deadline) + ' · ' : ''}Your answers are saved automatically.</div>` +
+  app(`<a class="backl" onclick="back()">← Back to my units</a>${S.practice ? '<div class="card" style="background:#fff8e1;border-color:#f2d675"><b>Practice mode</b> — this attempt is not saved. Your first result is already with your teacher.</div>' : ''}<h2>${esc(hw.title)}</h2><div class="mut" style="margin-bottom:12px">${S.task.unit ? esc(S.task.unit) + ' · ' : ''}${S.task.deadline ? 'Deadline: ' + esc(S.task.deadline) + ' · ' : ''}Your answers are saved automatically.</div>` +
     hw.sections.map((s, si) => `<div class="card">${head(s, si)}
       ${INL(s.type) ? '' : (s.text ? `<div class="txt">${rich(s.text)}</div>` : '')}${media(s.imageUrl, 'img')}${media(s.audioUrl, 'audio')}
       ${INL(s.type) ? inlineHTML(s, si) : s.items.map((it, i) => itemHTML(s, si, it, i)).join('')}</div>`).join('') +
-    `<div class="bar"><div class="mut">Answered: <b id="pg"></b></div><div class="prog"><i id="pb"></i></div><div class="err" id="e"></div><button class="btn full" id="sb" onclick="submitTask()">Submit homework</button></div>`);
+    `<div class="bar"><div class="mut">Answered: <b id="pg"></b></div><div class="prog"><i id="pb"></i></div><div class="err" id="e"></div><button class="btn full" id="sb" onclick="submitTask()">${S.practice ? 'Check answers' : 'Submit homework'}</button></div>`);
   hw.sections.forEach((s, si) => { if (s.type === 'order') s.items.forEach((it, i) => drawOrd(si + '.' + i, si, i)); });
   prog();
 }
@@ -349,13 +355,44 @@ function ordSync(k, si, i) {
   S.ans[k] = S.ord[k].map(n => w[n]).join(' '); saveDraft(); drawOrd(k, si, i); prog();
 }
 
+/* Try again: тренувальна спроба без збереження (правильні відповіді вже відомі після здачі) */
+function partsHTML(hw, by) {
+  if (!hw || hw.sections.length < 2) return '';
+  const rows = hw.sections.map((s, si) => {
+    const ks = s.items.map((_, i) => by[si + '.' + i]).filter(d => d && !d.manual), ok = ks.filter(d => d.ok).length;
+    return ks.length ? `<div class="row" style="padding:7px 0;border-top:1px solid var(--line)"><span>${esc(s.title || 'Exercise ' + (si + 1))}</span><span class="tag ${ok === ks.length ? '' : 'warn'}">${ok} / ${ks.length} · ${Math.round(ok / ks.length * 100)}%</span></div>` : '';
+  }).join('');
+  return rows ? `<div class="card"><h3>Results by part</h3>${rows}</div>` : '';
+}
+function tryAgain() { if (S.last) startPractice(S.last.hw, S.last.by); }
+function startPractice(hw, by) {
+  const items = {};
+  Object.keys(by).forEach(k => { const d = by[k]; items[k] = d.manual ? { manual: true } : { acc: (d.accepted && d.accepted.length) ? d.accepted : [d.correct], pts: d.points || 1 }; });
+  S.practice = { items }; S.task = { assignmentId: 'practice', unit: '', deadline: '', hw: JSON.parse(JSON.stringify(hw)) };
+  S.ans = {}; S.ord = {}; S.pick = null; renderTask(); push('task');
+}
+function checkPractice() {
+  const done = Object.keys(S.ans).filter(k => String(S.ans[k]).trim()).length;
+  if (done < S.total && !confirm(`You answered ${done} of ${S.total} questions. Check anyway?`)) return;
+  let got = 0, tot = 0; const details = [];
+  Object.keys(S.practice.items).forEach(k => {
+    const it = S.practice.items[k], given = S.ans[k] == null ? '' : String(S.ans[k]);
+    if (it.manual) { details.push({ key: k, manual: true, given, points: 1 }); return; }
+    const ok = !!fnorm(given) && it.acc.some(a => fnorm(a) === fnorm(given));
+    tot += it.pts; if (ok) got += it.pts;
+    details.push({ key: k, ok, given, correct: it.acc[0], accepted: it.acc, points: it.pts });
+  });
+  showResult({ score: got, max: tot, percent: tot ? Math.round(got / tot * 100) : 0, details }, S.task.hw, true, true);
+}
 async function submitTask() {
+  if (S.practice) return checkPractice();
   const done = Object.keys(S.ans).filter(k => String(S.ans[k]).trim()).length;
   if (done < S.total && !confirm(`You answered ${done} of ${S.total} questions. Submit anyway?`)) return;
   $('sb').disabled = true; $('e').textContent = '';
   try {
     const r = await api('submit', { name: S.name, group: S.group, assignmentId: S.task.assignmentId, answers: S.ans });
     store.del('eh_draft_' + S.name + S.task.assignmentId);
+    const it = S.list.find(x => x.id === S.task.assignmentId); if (it) { it.done = true; it.percent = r.percent; it.pending = !!r.pendingManual; }
     showResult(r, S.task.hw, true);
   } catch (e) { $('e').textContent = e.message; $('sb').disabled = false; }
 }
@@ -364,11 +401,14 @@ async function submitTask() {
 async function openResult(id) {
   app('<div class="card mut">Loading…</div>');
   try {
-    const [r, t] = await Promise.all([
-      api('myResult', { name: S.name, group: S.group, assignmentId: id }),
-      api('resultView', { name: S.name, group: S.group, assignmentId: id }).catch(() => null)
-    ]);
-    showResult(r, t && t.hw);
+    let r, hw; const q = { name: S.name, group: S.group, assignmentId: id };
+    try { r = await api('result', q); hw = r.hw; }
+    catch (e1) {
+      if (String(e1.raw || '').indexOf('Невідома дія') < 0) throw e1;   // справжня помилка — не повторюємо
+      const [a1, t] = await Promise.all([api('myResult', q), api('resultView', q).catch(() => null)]);   // старий сервер
+      r = a1; hw = t && t.hw;
+    }
+    showResult(r, hw);
   } catch (e) { app(`<div class="card err">${esc(e.message)}</div><button class="btn alt" onclick="showList()">Back</button>`); }
 }
 function ansChip(d) {
@@ -403,18 +443,18 @@ function reviewHTML(hw, by) {
     return `<div class="card">${head(s, si)}${!INL(s.type) && s.text ? `<div class="txt">${rich(s.text)}</div>` : ''}${body}</div>`;
   }).join('');
 }
-function showResult(r, hw, replace) {
-  const by = {}; r.details.forEach(d => by[d.key] = d);
+function showResult(r, hw, replace, practice) {
+  const by = {}; r.details.forEach(d => by[d.key] = d); S.last = { hw, by };
   const ok = r.details.filter(d => d.ok).length, bad = r.details.filter(d => !d.manual && !d.ok).length, man = r.details.filter(d => d.manual).length;
   const pend = r.pendingManual || r.pending;
   const msg = r.percent >= 90 ? 'Excellent work! 🌟' : r.percent >= 70 ? 'Good job! 👍' : r.percent >= 50 ? 'Not bad — review your mistakes below.' : 'Keep practising — check the mistakes below.';
   app(`<a class="backl" onclick="back()">← Back to my units</a><div class="card sum"><div class="mut">Your result</div><div class="big">${r.percent}%</div>
-    <div>${r.score}${r.max ? ' / ' + r.max : ''} points</div><p><b>${msg}</b></p>
+    <div>${r.score}${r.max ? ' / ' + r.max : ''} points</div><p><b>${msg}</b></p>${practice ? '<p><span class="tag warn">Practice — not saved. Your first result is already with your teacher.</span></p>' : ''}
     <div class="legend"><span class="a ok">✓ ${ok} correct</span><span class="a bad">✗ ${bad} mistakes</span>${man ? `<span class="a man">${man} for teacher</span>` : ''}</div>
     ${pend ? '<p><span class="tag warn">Open answers will be checked by your teacher — your percentage may change</span></p>' : ''}
     ${r.comment ? `<div class="txt"><b>Teacher’s comment:</b><br>${esc(r.comment)}</div>` : ''}</div>` +
-    (hw ? '<p class="mut">Your mistakes are marked in red; the correct answer is shown in green.</p>' + reviewHTML(hw, by) : '') +
-    `<button class="btn" onclick="back()">Back to my units</button>`);
+    (hw ? partsHTML(hw, by) + '<p class="mut">Your mistakes are marked in red; the correct answer is shown in green.</p>' + reviewHTML(hw, by) : '') +
+    `${hw ? '<button class="btn" onclick="tryAgain()">Try again</button> ' : ''}<button class="btn alt" onclick="back()">Back to my units</button>`);
   replace ? hrep('result') : push('result');
 }
 
@@ -565,7 +605,7 @@ const saved0 = store.get('eh_student');
 if (saved0 && saved0.name && saved0.group) {   // автоматичний вхід на цьому пристрої
   app('<div class="card mut">Loading…</div>');
   api('login', { name: saved0.name, group: saved0.group })
-    .then(d => { S.name = d.name; S.group = d.group; S.list = d.assignments; S.decks = d.decks || []; showList(true); })
+    .then(d => { S.name = d.name; S.group = d.group; S.list = d.assignments; S.decks = d.decks || []; S.fetched = Date.now(); showList(true); })
     .catch(() => goHome());
 } else goHome();
 </script>
