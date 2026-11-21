@@ -54,6 +54,8 @@ img.pic{max-width:100%;border-radius:10px;margin:10px 0}
 .wchip:hover{background:#f4faf6}.wchip.sel{background:var(--g);color:#fff}
 .dgap{display:inline-block;min-width:92px;min-height:32px;padding:0 10px;margin:0 3px;border-bottom:2px solid var(--g);background:#eef6f0;border-radius:6px;text-align:center;cursor:pointer;line-height:1.9;color:var(--mut);font-size:14px}
 .dgap.filled{background:#fff;border:1.5px solid var(--g);font-weight:700;color:var(--tx);font-size:inherit}.dgap.over{background:#cfe6d6}
+.vbox{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:2px solid var(--g);border-radius:12px;padding:10px 14px;margin:10px 0;background:#fff}
+.vchip{padding:6px 14px;border:1.5px solid var(--g);border-radius:20px;background:var(--gl);color:var(--g);font:inherit;font-weight:700;cursor:pointer}.vchip:hover{background:#d4e9da}
 select.gapsel{display:inline-block;width:auto;min-width:110px;padding:4px 8px;margin:0 3px;border:1.5px solid var(--g);border-radius:8px;background:#eef6f0;font:inherit}
 .bar{position:sticky;bottom:0;background:linear-gradient(0deg,var(--bg) 70%,transparent);padding:14px 0 10px}
 .prog{height:8px;background:#dbe5de;border-radius:8px;overflow:hidden;margin:6px 0 12px}.prog i{display:block;height:100%;width:0;background:var(--g2);transition:.2s}
@@ -285,9 +287,10 @@ function renderTask() {
   prog();
 }
 
-const INL = t => t === 'cloze' || t === 'dragcloze' || t === 'choicetext';   // вправи, де відповіді вписуються прямо в текст
+const INL = t => t === 'cloze' || t === 'dragcloze' || t === 'choicetext' || t === 'verbbox';   // вправи, де відповіді вписуються прямо в текст
 function inlineHTML(s, si) {
   if (s.type === 'cloze') return clozeHTML(s, si);
+  if (s.type === 'verbbox') return vboxHTML(s, si) + clozeHTML(s, si);
   if (s.type === 'dragcloze') return `<div id="dz${si}">${dragInner(s, si)}</div>`;
   return choiceHTML(s, si);
 }
@@ -321,11 +324,20 @@ function tapGap(si, i) {
   if (S.pick && S.pick.si === si) return placeWord(si, i, S.pick.n);
   if (S.ans[si + '.' + i]) { setAns(si + '.' + i, ''); redrawDrag(si); }
 }
+/* текст із рамкою слів: слова над текстом, учень вписує потрібну форму; дотик до слова вставляє його в пропуск */
+const vboxHTML = (s, si) => `<div class="vbox"><span class="mut">Words in the box:</span>${(s.bank || []).map((w, n) => `<button type="button" class="vchip" onclick="fillGap(${si},${n})">${esc(w)}</button>`).join('')}</div>`;
+const vboxStatic = s => `<div class="vbox"><span class="mut">Words in the box:</span>${(s.bank || []).map(w => `<span class="tag">${esc(w)}</span>`).join(' ')}</div>`;
+function fillGap(si, n) {
+  const s = S.task.hw.sections[si], w = s.bank[n];
+  let k = S.focus && S.focus.indexOf(si + '.') === 0 && !S.ans[S.focus] ? S.focus : null;
+  if (!k) { const i = s.items.findIndex((_, j) => !S.ans[si + '.' + j]); if (i < 0) return; k = si + '.' + i; }
+  setAns(k, w); const el = $('g' + k); if (el) { el.value = w; el.focus(); }
+}
 function clozeHTML(s, si) {
   return '<div class="cloze">' + rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((part, n) => {
     if (n % 2 === 0) return part;
     const k = si + '.' + part;
-    return `<input type="text" class="gap" placeholder="${Number(part) + 1}" value="${esc(S.ans[k] || '')}" oninput="setAns('${k}',this.value)" autocomplete="off" autocapitalize="off" spellcheck="false">`;
+    return `<input type="text" class="gap" id="g${k}" onfocus="S.focus='${k}'" placeholder="${Number(part) + 1}" value="${esc(S.ans[k] || '')}" oninput="setAns('${k}',this.value)" autocomplete="off" autocapitalize="off" spellcheck="false">`;
   }).join('') + '</div>';
 }
 function itemHTML(s, si, it, i) {
@@ -438,7 +450,7 @@ function reviewItem(s, si, it, i, d) {
 function reviewHTML(hw, by) {
   return hw.sections.map((s, si) => {
     const body = INL(s.type)
-      ? '<div class="cloze">' + rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((p, n) => n % 2 === 0 ? p : ansChip(by[si + '.' + p])).join('') + '</div>'
+      ? (s.type === 'verbbox' ? vboxStatic(s) : '') + '<div class="cloze">' + rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((p, n) => n % 2 === 0 ? p : ansChip(by[si + '.' + p])).join('') + '</div>'
       : s.items.map((it, i) => reviewItem(s, si, it, i, by[si + '.' + i])).join('');
     return `<div class="card">${head(s, si)}${!INL(s.type) && s.text ? `<div class="txt">${rich(s.text)}</div>` : ''}${body}</div>`;
   }).join('');

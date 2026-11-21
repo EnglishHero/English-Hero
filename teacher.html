@@ -35,6 +35,7 @@ input[type=checkbox]{width:auto;margin-right:8px}.opt2{display:block;padding:9px
 .rv .ro{padding:8px 12px;border:1.5px solid var(--line);border-radius:10px;margin:5px 0}
 .rv .ro.ok{background:#e1f4e7;border-color:#8fd0a8;color:#14703a;font-weight:700}.rv .ro.bad{background:#fde1de;border-color:#e5857d;color:#c0261b;font-weight:700}
 .rv .ro.fix{background:#fff;border:2px solid #14703a;color:#14703a;font-weight:700}.rv .ro.man{background:#fff3d6;border-color:#ecd08a}
+.rv .vbox{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border:2px solid var(--g);border-radius:12px;padding:8px 12px;margin:8px 0;background:#fff}
 .tb{display:block;margin:2px 0 6px}.tb .btn{margin-right:4px;min-width:38px}
 label.f{display:block;font-weight:600;margin:10px 0 4px;font-size:14px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:1 1 180px}.row>.btn{flex:0 0 auto}
@@ -125,20 +126,20 @@ const addSt = gi => run(async () => { const n = await api('addStudents', { group
 const rmSt = (gi, si) => confirm('Видалити учня зі списку?') && run(async () => { await api('removeStudent', { group: T.groups[gi].name, name: T.groups[gi].students[si] }); await refresh(); });
 
 /* ---------- Завдання (редактор + імпорт) ---------- */
-const INL = t => ['cloze', 'dragcloze', 'choicetext'].indexOf(t) >= 0;   // відповіді вписуються прямо в текст
+const INL = t => ['cloze', 'dragcloze', 'choicetext', 'verbbox'].indexOf(t) >= 0;   // відповіді вписуються прямо в текст
 const TYPES = { choice: 'Multiple choice', gap: 'Gap filling', wordform: 'Word formation', match: 'Matching', transform: 'Sentence transformation',
-  cloze: 'Текст із пропусками (суцільний текст)', dragcloze: 'Перетягування слів у текст', choicetext: 'Вибір слова в тексті / реченнях', order: 'Word order', tf: 'True / False', error: 'Error correction', reading: 'Reading comprehension', listening: 'Listening', open: 'Open-ended', translation: 'Translation' };
-const HINT = { cloze: '', dragcloze: '', choicetext: '', choice: 'Питання :: правильна відповідь :: варіант1 ; варіант2 ; варіант3', gap: 'She ___ (go) to school. :: goes', wordform: 'He is very ___. (SUCCESS) :: successful',
+  cloze: 'Текст із пропусками (суцільний текст)', verbbox: 'Текст із банком слів (форма дієслова)', dragcloze: 'Перетягування слів у текст', choicetext: 'Вибір слова в тексті / реченнях', order: 'Word order', tf: 'True / False', error: 'Error correction', reading: 'Reading comprehension', listening: 'Listening', open: 'Open-ended', translation: 'Translation' };
+const HINT = { cloze: '', verbbox: '', dragcloze: '', choicetext: '', choice: 'Питання :: правильна відповідь :: варіант1 ; варіант2 ; варіант3', gap: 'She ___ (go) to school. :: goes', wordform: 'He is very ___. (SUCCESS) :: successful',
   match: 'слово :: переклад/визначення', transform: 'Речення. Keyword: X :: правильний варіант|інший допустимий', order: 'Повне правильне речення (слова перемішаються автоматично)',
   tf: 'Твердження :: True', error: 'Речення з помилкою :: виправлене речення', reading: 'Питання :: відповідь  (або з варіантами :: ... :: a ; b ; c)',
   listening: 'Питання :: відповідь  (або з варіантами :: ... :: a ; b ; c)', open: 'Питання (перевіряє викладач)', translation: 'Речення :: переклад|варіант' };
-const newSec = () => ({ type: 'choice', title: '', instructions: '', text: '', imageUrl: '', audioUrl: '', lines: '', pts: 1, extra: '' });
+const newSec = () => ({ type: 'choice', title: '', instructions: '', text: '', imageUrl: '', audioUrl: '', lines: '', pts: 1, extra: '', bank: '' });
 
 function fromLines(s) {
   const L = s.lines.split('\n').map(x => x.trim()).filter(Boolean), o = { type: s.type, title: s.title, instructions: s.instructions };
   ['text', 'imageUrl', 'audioUrl'].forEach(k => { if (s[k]) o[k] = s[k]; });
   const pts = Number(s.pts) || 1;
-  if (INL(s.type)) { o.points = pts; if (s.type === 'dragcloze') o.extra = s.extra || ''; return o; }
+  if (INL(s.type)) { o.points = pts; if (s.type === 'dragcloze') o.extra = s.extra || ''; if (s.type === 'verbbox') o.bank = s.bank || ''; return o; }
   if (s.type === 'match') o.pairs = L.map(l => { const p = l.split('::').map(x => x.trim()); return { l: p[0], r: p[1] || '', points: pts }; });
   else o.items = L.map(l => {
     const p = l.split('::').map(x => x.trim()), it = { q: p[0], points: pts };
@@ -153,7 +154,7 @@ function fromLines(s) {
 }
 function toSec(o) {
   const s = Object.assign(newSec(), { type: o.type, title: o.title || '', instructions: o.instructions || '', text: o.text || '', imageUrl: o.imageUrl || '', audioUrl: o.audioUrl || '' });
-  if (INL(o.type)) { s.pts = o.points || 1; s.extra = o.extra || ''; }
+  if (INL(o.type)) { s.pts = o.points || 1; s.extra = o.extra || ''; s.bank = o.bank || ''; }
   else if (o.type === 'match') { s.lines = (o.pairs || []).map(p => p.l + ' :: ' + p.r).join('\n'); s.pts = (o.pairs[0] || {}).points || 1; }
   else { s.pts = ((o.items || [])[0] || {}).points || 1;
     s.lines = (o.items || []).map(i => o.type === 'order' ? i.answer : [i.q, [].concat(i.answer == null ? '' : i.answer).join('|'), (i.options || []).join(' ; ')].join(' :: ').replace(/( :: )+$/, '')).join('\n'); }
@@ -244,6 +245,7 @@ function impHw() { run(async () => {
 
 function textLabel(s) {
   if (s.type === 'cloze') return '<label class="f">Текст із пропусками <span class="mut">— правильну відповідь пишіть у подвійних дужках одразу в тексті: <b>{{isolation}}</b>; кілька варіантів через |: <b>{{behaviour|behavior}}</b>. Підказку в дужках, напр. (ISOLATE), залишайте поруч.</span></label>';
+  if (s.type === 'verbbox') return '<label class="f">Текст із пропусками <span class="mut">— правильну форму пишіть у подвійних дужках: <b>When we left home it {{wasn’t raining}} (not rain)</b>. Кілька варіантів через |: <b>{{wasn’t raining|was not raining}}</b>. Слова для рамки впишіть у поле нижче.</span></label>';
   if (s.type === 'dragcloze') return '<label class="f">Текст для перетягування слів <span class="mut">— правильне слово пишіть у подвійних дужках: <b>She {{went}} home.</b> Варіанти через |: <b>{{colour|color}}</b>. Блок зі словами над текстом збирається з відповідей автоматично.</span></label>';
   if (s.type === 'choicetext') return '<label class="f">Текст із вибором слова <span class="mut">— варіанти в подвійних дужках через |, правильний позначте зірочкою: <b>She {{is*|are|am}} happy.</b> Можна писати кілька речень, у кожному свій вибір.</span></label>';
   return '<label class="f">Текст (для reading, за потреби)</label>';
@@ -257,7 +259,7 @@ function drawEd() {
   ${E.sections.map((s, i) => `<div class="sec"><div class="row"><select onchange="secSet(${i},'type',this.value,1)">${Object.keys(TYPES).map(k => `<option value="${k}" ${k === s.type ? 'selected' : ''}>${TYPES[k]}</option>`).join('')}</select>
     <input placeholder="Заголовок секції" value="${esc(s.title)}" oninput="secSet(${i},'title',this.value)"><input type="number" min="1" style="max-width:90px" title="Балів за питання" value="${s.pts}" oninput="secSet(${i},'pts',this.value)"><button class="btn red sm" onclick="T.E.sections.splice(${i},1);drawEd()">✕</button></div>
     <label class="f">Інструкція</label>${bar(i, 'instructions')}<input id="sx${i}_instructions" onkeydown="kd(event,${i},'instructions')" value="${esc(s.instructions)}" oninput="secSet(${i},'instructions',this.value)">
-    ${textLabel(s)}${bar(i, 'text')}<textarea id="sx${i}_text" onkeydown="kd(event,${i},'text')" style="font-family:inherit;font-size:16px;min-height:${INL(s.type) ? 320 : 160}px" oninput="secSet(${i},'text',this.value);autoH(this)">${esc(s.text)}</textarea>${s.type === 'dragcloze' ? `<label class="f">Зайві слова (необов’язково, через кому) <span class="mut">— додаються до блоку слів як відволікаючі</span></label><input value="${esc(s.extra || '')}" oninput="secSet(${i},'extra',this.value)">` : ''}
+    ${textLabel(s)}${bar(i, 'text')}<textarea id="sx${i}_text" onkeydown="kd(event,${i},'text')" style="font-family:inherit;font-size:16px;min-height:${INL(s.type) ? 320 : 160}px" oninput="secSet(${i},'text',this.value);autoH(this)">${esc(s.text)}</textarea>${s.type === 'verbbox' ? `<label class="f">Слова в рамці (через кому) <span class="mut">— показуються над текстом; учень вписує їхню правильну форму</span></label><input value="${esc(s.bank || '')}" placeholder="finish, forget, go, leave, not listen, not see, wait" oninput="secSet(${i},'bank',this.value)">` : ''}${s.type === 'dragcloze' ? `<label class="f">Зайві слова (необов’язково, через кому) <span class="mut">— додаються до блоку слів як відволікаючі</span></label><input value="${esc(s.extra || '')}" oninput="secSet(${i},'extra',this.value)">` : ''}
     <div class="row"><div><label class="f">Посилання на зображення (Google Drive / URL)</label><input value="${esc(s.imageUrl)}" oninput="secSet(${i},'imageUrl',this.value)"></div>
     <div><label class="f">Посилання на аудіо (Google Drive / URL)</label><input value="${esc(s.audioUrl)}" oninput="secSet(${i},'audioUrl',this.value)"></div></div>
     ${INL(s.type) ? '' : `<label class="f">Питання — по одному в рядку <span class="mut">(${esc(HINT[s.type])})</span></label>${bar(i, 'lines')}<textarea id="sx${i}_lines" onkeydown="kd(event,${i},'lines')" style="min-height:220px" oninput="secSet(${i},'lines',this.value);autoH(this)">${esc(s.lines)}</textarea>`}</div>`).join('')}
@@ -443,7 +445,7 @@ function rvItem(s, si, it, i, d) {
 function rvHTML(hw, by) {
   return hw.sections.map((s, si) => {
     const body = INL(s.type)
-      ? '<div class="cloze">' + rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((p, n) => n % 2 === 0 ? p : rvChip(by[si + '.' + p])).join('') + '</div>'
+      ? (s.type === 'verbbox' ? `<div class="vbox"><span class="mut">Слова в рамці:</span>${String(s.bank || '').split(',').map(w => w.trim()).filter(Boolean).map(w => `<span class="tag">${esc(w)}</span>`).join(' ')}</div>` : '') + '<div class="cloze">' + rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((p, n) => n % 2 === 0 ? p : rvChip(by[si + '.' + p])).join('') + '</div>'
       : s.items.map((it, i) => rvItem(s, si, it, i, by[si + '.' + i])).join('');
     return `<div class="card"><h3>${esc(s.title || 'Exercise ' + (si + 1))}</h3>${s.instructions ? `<div class="mut">${rich(s.instructions)}</div>` : ''}${!INL(s.type) && s.text ? `<div class="txt">${rich(s.text)}</div>` : ''}${body}</div>`;
   }).join('');
