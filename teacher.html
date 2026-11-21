@@ -26,6 +26,15 @@ textarea{min-height:120px;font-family:ui-monospace,Menlo,Consolas,monospace;font
 input[type=checkbox]{width:auto;margin-right:8px}.opt2{display:block;padding:9px 12px;border:1px solid var(--line);border-radius:10px;margin:6px 0;background:#fbfdfb}
 .fold{border:1px solid var(--line);border-radius:12px;margin:10px 0;background:#fff}.fold>summary{cursor:pointer;padding:12px 14px;font-weight:700;list-style:none}.fold>summary::-webkit-details-marker{display:none}
 .fold.sub{margin:6px 12px 10px;background:#fbfdfb}.fold.sub>summary{font-weight:600}
+.rv .q{padding:12px 0;border-top:1px solid var(--line)}.rv .q:first-child{border-top:0}
+.rv .qt{white-space:pre-wrap;margin-bottom:6px}.rv .txt{background:#f4f8f5;border-left:4px solid var(--g);padding:12px 14px;border-radius:8px;white-space:pre-wrap;margin:10px 0}
+.rv .cloze{white-space:pre-wrap;line-height:2.3;margin:8px 0}.rv .ansrow{margin-top:6px}
+.rv .a{display:inline-block;padding:1px 9px;border-radius:7px;font-weight:700;margin:0 2px}
+.rv .a.ok{background:#e1f4e7;color:#14703a;border:1.5px solid #8fd0a8}.rv .a.bad{background:#fde1de;color:#c0261b;border:1.5px solid #ee9a93;min-width:44px}.rv .a.bad s{text-decoration-thickness:2px}
+.rv .a.fix{background:#14703a;color:#fff;border:1.5px solid #14703a}.rv .a.man{background:#fff3d6;color:#7a5200;border:1.5px solid #ecd08a;white-space:pre-wrap}
+.rv .ro{padding:8px 12px;border:1.5px solid var(--line);border-radius:10px;margin:5px 0}
+.rv .ro.ok{background:#e1f4e7;border-color:#8fd0a8;color:#14703a;font-weight:700}.rv .ro.bad{background:#fde1de;border-color:#e5857d;color:#c0261b;font-weight:700}
+.rv .ro.fix{background:#fff;border:2px solid #14703a;color:#14703a;font-weight:700}.rv .ro.man{background:#fff3d6;border-color:#ecd08a}
 .tb{display:block;margin:2px 0 6px}.tb .btn{margin-right:4px;min-width:38px}
 label.f{display:block;font-weight:600;margin:10px 0 4px;font-size:14px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row>*{flex:1 1 180px}.row>.btn{flex:0 0 auto}
@@ -50,7 +59,7 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp
 /* дозволене форматування: <b>жирний</b>, <i>курсив</i>, <u>підкреслений</u>; усе інше екранується */
 function rich(s) {
   const st = [];
-  const o = esc(s).replace(/&lt;(\/?)(b|i|u)&gt;/gi, (m, c, t) => {
+  const o = esc(s).replace(/&lt;(\/?)(b|i|u|s)&gt;/gi, (m, c, t) => {
     t = t.toLowerCase();
     if (!c) { st.push(t); return '<' + t + '>'; }
     const j = st.lastIndexOf(t); if (j < 0) return '';
@@ -203,12 +212,33 @@ function viewHw() {
   $('tab').innerHTML = `<div class="card"><h2>Мої завдання</h2><div class="mut">Папки: група → юніт → вправи. Відкривається лише та папка, яку ви натиснули.</div>${hwTree()}
     <p><button class="btn" onclick="T.E={title:'',unit:'',group:'',sections:[newSec()]};drawEd()">+ Нове завдання</button></p></div><div id="mv"></div><div id="ed"></div>
     <div class="card"><h2>Імпорт із Claude (JSON)</h2><textarea id="imp" placeholder='{"title":"...","unit":"Unit 1","sections":[...]}'></textarea>
-    <p><button class="btn" onclick="impHw()">Імпортувати в редактор</button></p></div>`;
+    <p><button class="btn" onclick="impHw()">Імпортувати в редактор</button> <label class="btn alt" style="cursor:pointer">Імпорт із файлу (.json)<input type="file" accept=".json,.txt,application/json" style="display:none" onchange="fileToBox(this,'imp')"></label></p></div>`;
   if (T.E) drawEd();
 }
 const editHw = id => run(async () => { const h = await api('getHomework', { id }); T.E = { id: h.id, title: h.title, unit: h.unit || '', group: (T.hws.find(x => x.id === id) || {}).group || '', sections: h.sections.map(toSec) }; drawEd(); });
+/* «Поблажливий» розбір JSON: прибирає ```-огорожу, BOM і службові переноси рядків усередині тексту
+   (вони з'являються, коли код копіюють з переносом рядків — у справжньому JSON їх бути не може) */
+function parseLoose(txt) {
+  txt = String(txt || '').replace(/^\uFEFF/, '').replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, '').trim();
+  try { return JSON.parse(txt); } catch (e) {
+    let out = '', ins = false, esc = false;
+    for (const ch of txt) {
+      if (!ins) { if (ch === '"') ins = true; out += ch; continue; }
+      if (esc) { out += ch; esc = false; continue; }
+      if (ch === '\\') { out += ch; esc = true; } else if (ch === '"') { ins = false; out += ch; }
+      else if (ch === '\r') { /* пропускаємо */ } else if (ch === '\n' || ch === '\t') out += ' ';
+      else out += ch;
+    }
+    try { return JSON.parse(out); } catch (e2) { throw new Error('Не вдалося прочитати JSON (' + e.message + '). Спробуйте «Імпорт із файлу» або скопіюйте код ще раз цілком.'); }
+  }
+}
+function fileToBox(inp, id) {   // завантажити JSON з файлу замість копіювання
+  const f = inp.files && inp.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = () => { $(id).value = String(r.result); toast('Файл завантажено — натисніть «Імпортувати в редактор»'); inp.value = ''; };
+  r.readAsText(f, 'utf-8');
+}
 function impHw() { run(async () => {
-  const h = JSON.parse($('imp').value.replace(/^```json|```$/g, '').trim());
+  const h = parseLoose($('imp').value);
   if (!h.title || !Array.isArray(h.sections)) throw new Error('У JSON має бути title і sections');
   T.E = { id: h.id, title: h.title, unit: h.unit || '', group: '', sections: h.sections.map(toSec) }; drawEd(); toast('Завантажено в редактор — перевірте й збережіть'); }); }
 
@@ -251,7 +281,7 @@ function autoH(el) { if (el.tagName === 'TEXTAREA') { el.style.height = 'auto'; 
 const saveHw = () => run(async () => {
   const E = T.E; if (!E.title.trim()) throw new Error('Введіть назву');
   const id = await api('saveHomework', { hw: { id: E.id, title: E.title, unit: E.unit || '', group: E.group || '', sections: E.sections.map(fromLines) } });
-  T.open['hwg|' + (E.group || '')] = true; T.open['hw|' + (E.group || '') + '|' + (E.unit || '')] = true; T.hwCache = {}; T.E = null; await refresh(); toast('Збережено');
+  T.open['hwg|' + (E.group || '')] = true; T.open['hw|' + (E.group || '') + '|' + (E.unit || '')] = true; T.hwCache = {}; T.vw = {}; T.E = null; await refresh(); toast('Збережено');
 });
 
 /* ---------- Призначити: відкриття окремих завдань групі ---------- */
@@ -291,7 +321,7 @@ function viewDecks() {
   $('tab').innerHTML = `<div class="card"><h2>Набори флешкарток</h2><div class="mut">Папки: група → список юнітів (наборів). Набір можна перемістити в іншу групу кнопкою «Перемістити».</div>${deckTree()}
     <p><button class="btn" onclick="T.D={title:'',unit:'',group:'',lines:''};drawDeckEd()">+ Новий набір</button></p></div><div id="mv"></div><div id="ded"></div>
     <div class="card"><h2>Імпорт із Claude (JSON)</h2><textarea id="dimp" style="min-height:140px" placeholder='{"title":"...","unit":"Unit 1","blocks":[{"title":"Block 1","cards":[{"front":"red","back":"червоний","example":"A red apple."}]}]}'></textarea>
-    <p><button class="btn" onclick="impDeck()">Імпортувати в редактор</button></p></div>
+    <p><button class="btn" onclick="impDeck()">Імпортувати в редактор</button> <label class="btn alt" style="cursor:pointer">Імпорт із файлу (.json)<input type="file" accept=".json,.txt,application/json" style="display:none" onchange="fileToBox(this,'dimp')"></label></p></div>
     <div class="card"><h2>Відкрити блоки слів групі</h2><div class="mut">Позначені блоки учні бачать, зняті — ні. Щоб додати нові слова до старих, позначте наступний блок; щоб прибрати — зніміть позначку.</div>
     <div class="row" style="margin-top:10px"><select id="dsel" onchange="deckPick()">${T.decks.map(d => `<option value="${d.id}">${esc((d.group ? d.group + ' › ' : '') + (d.unit ? d.unit + ' · ' : '') + d.title)}</option>`).join('')}</select>
     <select id="dgrp" onchange="deckPick()">${T.groups.map(g => `<option>${esc(g.name)}</option>`).join('')}</select></div><div id="dbl" style="margin-top:10px" class="mut">${T.decks.length && T.groups.length ? 'Завантаження…' : 'Спочатку створіть набір і групу'}</div></div>
@@ -324,7 +354,7 @@ function drawDeckEd() {
   document.querySelectorAll('#ded textarea').forEach(autoH);
 }
 function impDeck() { run(async () => {
-  let j = JSON.parse($('dimp').value.replace(/^\s*```(?:json)?|```\s*$/g, '').trim());
+  let j = parseLoose($('dimp').value);
   if (Array.isArray(j)) j = { blocks: [{ title: 'Block 1', cards: j }] };
   const raw = j.blocks || (j.cards ? [{ title: 'Block 1', cards: j.cards }] : null);
   if (!raw) throw new Error('У JSON має бути blocks (або cards)');
@@ -350,31 +380,99 @@ const saveDk = () => run(async () => {
 const delDeck = id => confirm('Видалити набір разом з доступом груп?') && run(async () => { await api('deleteDeck', { id }); await refresh(); });
 const delDa = id => run(async () => { await api('deleteDeckAssign', { id }); await refresh(); toast('Закрито'); });
 
-/* ---------- Результати ---------- */
+/* ---------- Результати: за групами, у вигляді, який бачить учень ---------- */
+const grpOrder = (a, b) => ((T.groups.map(g => g.name).indexOf(a) + 1) || 999) - ((T.groups.map(g => g.name).indexOf(b) + 1) || 999);
+function asgOpts() {   // список призначень, згрупований за групами
+  const by = {}; T.asg.forEach(a => (by[a.group] = by[a.group] || []).push(a));
+  return Object.keys(by).sort(grpOrder).map(g => `<optgroup label="${esc(g)}">${by[g].map(a => `<option value="${a.id}">${esc((a.unit ? a.unit + ' · ' : '') + a.title)}${a.sections ? ' (завд. ' + a.sections.join(', ') + ')' : ''}</option>`).join('')}</optgroup>`).join('');
+}
 function viewRes() {
-  $('tab').innerHTML = `<div class="card"><div class="row"><select id="rs" onchange="loadRes()"><option value="">Усі роботи</option>${T.asg.map(a => `<option value="${a.id}">${esc(a.title)} — ${esc(a.group)}</option>`).join('')}</select>
-    <button class="btn alt" onclick="csv()">Експорт CSV</button><button class="btn red" onclick="delAllRes()">Видалити всі результати цього завдання</button></div><div class="mut" style="margin-top:8px">Усі результати також автоматично лежать в аркуші Submissions вашої Google Таблиці.</div></div><div id="rl"></div><div id="rd"></div>`;
+  T.vw = {};
+  $('tab').innerHTML = `<div class="card"><div class="row"><select id="rs" onchange="loadRes()"><option value="">Усі роботи</option>${asgOpts()}</select>
+    <button class="btn alt" onclick="csv()">Експорт CSV</button><button class="btn red" onclick="delAllRes()">Видалити всі результати цього завдання</button></div><div class="mut" style="margin-top:8px">Папки: група → завдання → учні. Натисніть на учня, щоб побачити роботу так, як її бачив він. Усі результати також лежать в аркуші Submissions вашої таблиці.</div></div><div id="rd"></div><div id="rl"></div>`;
   loadRes();
+}
+function resTree(list) {   // група → завдання → учні
+  list.forEach((r, i) => r._i = i);
+  const avgOf = l => Math.round(l.reduce((a, r) => a + r.percent, 0) / l.length);
+  return Array.from(new Set(list.map(r => r.group))).sort(grpOrder).map(g => {
+    const rs = list.filter(r => r.group === g);
+    const inner = Array.from(new Set(rs.map(r => r.assignmentId))).map(aid => {
+      const l = rs.filter(r => r.assignmentId === aid).sort((a, b) => a.student.localeCompare(b.student));
+      return fold('res|' + g + '|' + aid, 'sub', '📝 ' + esc(l[0].title) + ` <span class="mut">· середній ${avgOf(l)}%</span>`, l.length,
+        `<div class="scroll" style="padding:0 14px 10px"><table><tr><th>Учень</th><th>Бали</th><th>%</th><th>Статус</th><th>Здано</th></tr>${l.map(r => `<tr class="c" onclick="detail(${r._i})"><td>${esc(r.student)}</td><td>${r.score}/${r.max}</td><td>${r.percent}%</td><td><span class="tag ${/Очікує/.test(r.status) ? 'w' : ''}">${esc(r.status)}</span></td><td>${esc(r.time)}</td></tr>`).join('')}</table></div>`);
+    }).join('');
+    return fold('resg|' + g, '', '📁 ' + esc(g) + ` <span class="mut">· середній ${avgOf(rs)}%</span>`, rs.length, inner);
+  }).join('') || '<div class="mut">Результатів поки немає</div>';
 }
 const loadRes = () => run(async () => {
   if (!$('rs')) return; const id = $('rs').value; T.res = await api('results', { assignmentId: id }); if (!$('rl')) return;
-  const avg = T.res.length ? Math.round(T.res.reduce((a, r) => a + r.percent, 0) / T.res.length) : 0;
+  if (id) { const a = T.asg.find(x => x.id === id); if (a) { T.open['resg|' + a.group] = true; T.open['res|' + a.group + '|' + id] = true; } }   // обране завдання відкриваємо
   let miss = ''; if (id) { const m = await api('notSubmitted', { assignmentId: id }); miss = m.length ? `<p class="mut">Ще не здали: ${m.map(esc).join(', ')}</p>` : '<p class="mut">Здали всі 👍</p>'; }
   if (!$('rl')) return;
-  $('rl').innerHTML = `<div class="card"><h2>Робіт: ${T.res.length} · середній результат: ${avg}%</h2>${miss}<div class="scroll"><table><tr><th>Учень</th><th>Група</th><th>Завдання</th><th>Бали</th><th>%</th><th>Статус</th><th>Здано</th></tr>
-    ${T.res.map((r, i) => `<tr class="c" onclick="detail(${i})"><td>${esc(r.student)}</td><td>${esc(r.group)}</td><td>${esc(r.title)}</td><td>${r.score}/${r.max}</td><td>${r.percent}%</td><td><span class="tag ${/Очікує/.test(r.status) ? 'w' : ''}">${esc(r.status)}</span></td><td>${esc(r.time)}</td></tr>`).join('')}</table></div></div>`;
-  $('rd').innerHTML = '';
+  const avg = T.res.length ? Math.round(T.res.reduce((a, r) => a + r.percent, 0) / T.res.length) : 0;
+  $('rl').innerHTML = `<div class="card"><h2>Робіт: ${T.res.length} · середній результат: ${avg}%</h2>${miss}${resTree(T.res)}</div>`;
+  if ($('rd')) $('rd').innerHTML = '';
 });
-async function detail(i) { run(async () => {
-  const r = T.res[i]; if (!T.hwCache[r.hwId]) T.hwCache[r.hwId] = await api('getHomework', { id: r.hwId }).catch(() => null);
-  if (!$('rd')) return;
-  const hw = T.hwCache[r.hwId], by = {}; r.details.forEach(d => by[d.key] = d);
-  const secAt = si => hw ? hw.sections[r.sectionIdx ? r.sectionIdx[si] : si] : null;
-  const q = (si, ii) => { const s = secAt(si); return s ? ((s.items || s.pairs || [])[ii] || {}) : {}; };
+
+/* ---- перегляд роботи так, як її бачив учень ---- */
+function rvChip(d) {
+  if (!d) return '';
+  const g = d.given ? esc(d.given) : '';
+  if (d.manual) return `<span class="a man">${g || '—'}</span>`;
+  if (d.ok) return `<span class="a ok">✓ ${g}</span>`;
+  return `<span class="a bad">${g ? '<s>' + g + '</s>' : '&nbsp;&nbsp;&nbsp;'}</span><span class="a fix">${esc(d.correct)}</span>`;
+}
+function rvItem(s, si, it, i, d) {
+  if (!d) return '';
+  const num = `<b>${i + 1}.</b> `;
+  if (it.options) {
+    const opts = it.options.map(o => {
+      const mine = o === d.given, right = !d.ok && !d.manual && o === d.correct;
+      const c = 'ro' + (mine ? (d.ok ? ' ok' : d.manual ? ' man' : ' bad') : right ? ' fix' : '');
+      return `<div class="${c}">${mine ? (d.ok ? '✓ ' : d.manual ? '' : '✗ ') : right ? '✓ ' : ''}${esc(o)}</div>`;
+    }).join('');
+    return `<div class="q"><div class="qt">${num}${rich(it.q)}</div>${opts}${!d.given && !d.manual ? '<div class="mut">Без відповіді</div>' : ''}</div>`;
+  }
+  if (s.type === 'match') return `<div class="q"><div class="qt">${num}${rich(it.q)} → ${rvChip(d)}</div></div>`;
+  let line = s.type === 'order' ? 'Put the words in the correct order:' : rich(it.q);
+  if (s.type !== 'order' && /_{2,}/.test(line)) line = line.replace(/_{2,}/, () => rvChip(d));
+  else line += `<div class="ansrow">${rvChip(d)}</div>`;
+  return `<div class="q"><div class="qt">${num}${line}</div>${d.manual ? '<div class="mut">Відкрита відповідь — потрібна ваша оцінка.</div>' : ''}</div>`;
+}
+function rvHTML(hw, by) {
+  return hw.sections.map((s, si) => {
+    const body = INL(s.type)
+      ? '<div class="cloze">' + rich(String(s.text)).split(/\{\{(\d+)\}\}/).map((p, n) => n % 2 === 0 ? p : rvChip(by[si + '.' + p])).join('') + '</div>'
+      : s.items.map((it, i) => rvItem(s, si, it, i, by[si + '.' + i])).join('');
+    return `<div class="card"><h3>${esc(s.title || 'Exercise ' + (si + 1))}</h3>${s.instructions ? `<div class="mut">${rich(s.instructions)}</div>` : ''}${!INL(s.type) && s.text ? `<div class="txt">${rich(s.text)}</div>` : ''}${body}</div>`;
+  }).join('');
+}
+function rvParts(hw, by) {
+  if (hw.sections.length < 2) return '';
+  const rows = hw.sections.map((s, si) => {
+    const ks = s.items.map((_, i) => by[si + '.' + i]).filter(d => d && !d.manual), ok = ks.filter(d => d.ok).length;
+    return ks.length ? `<div class="row" style="padding:6px 0;border-top:1px solid var(--line)"><span>${esc(s.title || 'Exercise ' + (si + 1))}</span><span class="tag ${ok === ks.length ? '' : 'w'}">${ok} / ${ks.length} · ${Math.round(ok / ks.length * 100)}%</span></div>` : '';
+  }).join('');
+  return rows ? `<div class="card"><h3>Результат за частинами</h3>${rows}</div>` : '';
+}
+const plainDetail = r => `<div class="card"><div class="mut">Завдання видалено або змінено, тому показано лише список відповідей.</div>${r.details.map(d => `<div class="ans ${d.manual ? 'm' : d.ok ? 'y' : 'n'}"><div class="mut">Питання ${esc(d.key)}</div><div>Відповідь: <b>${esc(d.given) || '—'}</b></div>${d.manual || d.ok ? '' : `<div>Правильно: <b>${esc(d.correct)}</b></div>`}</div>`).join('')}</div>`;
+async function getView(aid) {
+  T.vw = T.vw || {};
+  if (!(aid in T.vw)) { try { T.vw[aid] = (await api('assignmentView', { assignmentId: aid })).view; } catch (e) { T.vw[aid] = null; } }
+  return T.vw[aid];
+}
+function detail(i) { run(async () => {
+  const r = T.res[i], view = await getView(r.assignmentId); if (!$('rd')) return;
+  const by = {}; r.details.forEach(d => by[d.key] = d);
   const manualMax = r.details.filter(d => d.manual).reduce((a, d) => a + d.points, 0);
-  $('rd').innerHTML = `<div class="card"><h2>${esc(r.student)} — ${esc(r.title)} (${r.percent}%)</h2>` + r.details.map(d => { const [si, ii] = d.key.split('.').map(Number), it = q(si, ii);
-    return `<div class="ans ${d.manual ? 'm' : d.ok ? 'y' : 'n'}"><div class="mut">${si + 1}.${ii + 1} ${rich(it.q || it.l || (secAt(si) && INL(secAt(si).type) ? 'Пропуск ' + (ii + 1) : ''))}</div><div>Відповідь: <b>${esc(d.given) || '—'}</b></div>${d.manual ? '' : d.ok ? '' : `<div>Правильно: <b>${esc(d.correct)}</b></div>`}</div>`; }).join('') +
-    (manualMax ? `<div class="row" style="margin-top:10px"><div><label class="f">Бали за відкриті відповіді (0–${manualMax})</label><input type="number" id="ms" min="0" max="${manualMax}"></div><div><label class="f">Коментар учню</label><input id="mc" value="${esc(r.comment)}"></div><button class="btn" onclick="gradeM(${i})">Зберегти оцінку</button></div>` : '') + `<p><button class="btn red" onclick="delRes(${i})">Видалити цей результат (учень зможе виконати завдання знову)</button></p></div>`;
+  $('rd').innerHTML = `<div class="rv"><div class="card"><div class="row"><div><h2 style="margin:0">${esc(r.student)} <span class="mut">· ${esc(r.group)}</span></h2><div class="mut">${esc(r.title)} · ${esc(r.time)}</div></div>
+    <div><span class="tag">${r.score}/${r.max} · ${r.percent}%</span> <span class="tag ${/Очікує/.test(r.status) ? 'w' : ''}">${esc(r.status)}</span></div><button class="btn alt sm" onclick="$('rd').innerHTML=''">Закрити</button></div>
+    ${r.comment ? `<div class="mut" style="margin-top:6px">Ваш коментар: ${esc(r.comment)}</div>` : ''}
+    <div class="mut" style="margin-top:6px">Зелений — правильно, червоний — помилка (поруч правильна відповідь), жовтий — відкрита відповідь.</div></div>
+    ${view ? rvParts(view, by) + rvHTML(view, by) : plainDetail(r)}
+    <div class="card">${manualMax ? `<div class="row"><div><label class="f">Бали за відкриті відповіді (0–${manualMax})</label><input type="number" id="ms" min="0" max="${manualMax}"></div><div><label class="f">Коментар учню</label><input id="mc" value="${esc(r.comment)}"></div><button class="btn" onclick="gradeM(${i})">Зберегти оцінку</button></div>` : ''}
+    <p style="margin-bottom:0"><button class="btn red" onclick="delRes(${i})">Видалити цей результат (учень зможе виконати завдання знову)</button></p></div></div>`;
   $('rd').scrollIntoView({ behavior: 'smooth' }); }); }
 const delRes = i => confirm('Видалити цей результат? Учень зможе виконати завдання знову.') && run(async () => { const r = T.res[i]; await api('deleteSubmission', { row: r.row, assignmentId: r.assignmentId, student: r.student }); await loadRes(); toast('Результат видалено'); });
 const delAllRes = () => { const id = $('rs').value; if (!id) return toast('Спочатку оберіть конкретне завдання у списку', 1);
