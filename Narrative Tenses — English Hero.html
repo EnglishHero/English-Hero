@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="uk"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Narrative Tenses — English Hero</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--g:#0F4A36;--mint:#E9F4EC;--line:#C9DFD0;--ink:#0E2A21;--muted:#3C5A4C;--bg:#fff;--card:#fff;--hl:#0F4A36;--on:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--g:#1F7A57;--mint:#173528;--line:#2A4A3A;--ink:#E8F3EC;--muted:#A9C4B5;--bg:#0C1A14;--card:#12261D;--hl:#8FE0AE}}
+:root[data-theme="dark"]{--g:#1F7A57;--mint:#173528;--line:#2A4A3A;--ink:#E8F3EC;--muted:#A9C4B5;--bg:#0C1A14;--card:#12261D;--hl:#8FE0AE}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;font-size:16px;line-height:1.55}
+.wrap{max-width:760px;margin:0 auto;padding:18px 16px 40px}
+.brand{font-size:12px;font-weight:800;letter-spacing:.16em;color:var(--hl);display:flex;justify-content:space-between;border-bottom:2px solid var(--g);padding-bottom:10px}
+h1{margin:18px 0 4px;font-size:clamp(30px,7vw,44px);line-height:1.1;color:var(--hl);font-weight:800}
+h2{margin:0 0 8px;font-size:22px;color:var(--hl);font-weight:800}
+.sub{margin:0 0 14px;color:var(--muted)}
+nav{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5;scrollbar-width:thin}
+button{font:inherit;cursor:pointer}
+nav button,.seg button{flex:0 0 auto;min-height:44px;padding:8px 16px;border-radius:99px;border:1.5px solid var(--g);background:transparent;color:var(--hl);font-weight:800;font-size:14px}
+nav button.on,.seg button.on{background:var(--g);color:#fff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin:12px 0}
+.dark{background:var(--g);color:#fff;border-radius:16px;padding:16px 18px;margin:12px 0}
+.dark h2,.dark b{color:#fff}
+.ex{background:var(--mint);border-radius:10px;padding:8px 12px;margin:8px 0}
+.dark .ex{background:rgba(255,255,255,.14)}
+b{color:var(--hl)}
+.m{color:var(--muted);font-size:14px}
+.seg{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.pane[hidden],section[hidden]{display:none}
+.grid{display:grid;gap:12px}
+.tile{text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:16px 18px;color:var(--ink);min-height:44px}
+.tile:hover,.tile:focus-visible{border-color:var(--g)}
+.tile .t{font-weight:800;font-size:18px;color:var(--hl)}
+.row{display:grid;grid-template-columns:1fr;gap:4px;padding:10px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.lbl{font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--muted)}
+.pn{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+.pn button{min-height:44px;padding:10px 18px;border-radius:12px;border:1.5px solid var(--g);background:var(--g);color:#fff;font-weight:800}
+.pn button[disabled]{opacity:.35;cursor:default}
+.foot{margin-top:28px;font-size:12px;color:var(--muted);text-align:center}
+@media(min-width:600px){.row{grid-template-columns:1fr 1fr}}
+</style></head>
+<body><div class="wrap">
+<div class="brand"><span>ENGLISH HERO</span><span>NARRATIVE TENSES</span></div>
+<h1>Narrative Tenses</h1>
+<p class="sub">Як розповідати історії в минулому: три часи, три ролі.</p>
+<nav id="nav" aria-label="Розділи"></nav>
+
+<section data-t="Огляд">
+<h2>Три шари історії</h2>
+<p class="m">Натисни на час, щоб відкрити правило.</p>
+<div class="grid">
+<button class="tile" data-go="1"><div class="t">Past Simple</div>Головні події. Що сталося?<div class="ex">He <b>jumped</b>.</div></button>
+<button class="tile" data-go="2"><div class="t">Past Continuous</div>Фон, процес. Що відбувалося?<div class="ex">He <b>was jumping</b>.</div></button>
+<button class="tile" data-go="3"><div class="t">Past Perfect</div>Передісторія. Що було раніше?<div class="ex">He <b>had jumped</b>.</div></button>
+</div></section>
+
+<section data-t="Past Simple" hidden>
+<h2>Past Simple: що сталося</h2>
+<p><b>Коли:</b> завершена дія; дії одна за одною; факт із точним часом.</p>
+<div class="seg" data-g="ss">
+<button class="on" data-p="ss1">Ствердження</button><button data-p="ss2">Заперечення</button><button data-p="ss3">Питання</button></div>
+<div class="card pane" id="ss1" data-g="ss"><p class="lbl">V2 (-ed або 2-га форма)</p><div class="ex">I <b>opened</b> the door.</div><div class="ex">She <b>called</b> me yesterday.</div></div>
+<div class="card pane" id="ss2" data-g="ss" hidden><p class="lbl">DIDN’T + V1</p><div class="ex">I <b>didn’t open</b> the door.</div><div class="ex">He <b>didn’t go</b>.</div></div>
+<div class="card pane" id="ss3" data-g="ss" hidden><p class="lbl">DID + ПІДМЕТ + V1</p><div class="ex"><b>Did</b> you <b>open</b> the door?</div></div>
+<div class="card"><p class="lbl">ДІЇ ОДНА ЗА ОДНОЮ</p><div class="ex">He <b>got up</b>, <b>took</b> his bag and <b>left</b>.</div>
+<p class="lbl">МАРКЕРИ</p><p class="m">yesterday, last week, in 2019, two days ago, then, after that</p></div>
+</section>
+
+<section data-t="Past Continuous" hidden>
+<h2>Past Continuous: що відбувалося</h2>
+<p><b>Коли:</b> дія тривала в певний момент; фон історії; дві тривалі дії одночасно; перервана дія.</p>
+<div class="seg" data-g="pc">
+<button class="on" data-p="pc1">Ствердження</button><button data-p="pc2">Заперечення</button><button data-p="pc3">Питання</button></div>
+<div class="card pane" id="pc1" data-g="pc"><p class="lbl">WAS / WERE + V-ING</p><div class="ex">It <b>was raining</b>.</div><div class="ex">They <b>were playing</b>.</div></div>
+<div class="card pane" id="pc2" data-g="pc" hidden><p class="lbl">WASN’T / WEREN’T + V-ING</p><div class="ex">I <b>wasn’t sleeping</b>.</div></div>
+<div class="card pane" id="pc3" data-g="pc" hidden><p class="lbl">WAS / WERE + ПІДМЕТ + V-ING</p><div class="ex"><b>Were</b> you <b>watching</b> TV?</div></div>
+<div class="seg" data-g="pcw">
+<button class="on" data-p="w1">Момент</button><button data-p="w2">Фон</button><button data-p="w3">Одночасно</button><button data-p="w4">Перервана дія</button></div>
+<div class="card pane" id="w1" data-g="pcw"><div class="ex">At 8 p.m. I <b>was doing</b> my homework.</div></div>
+<div class="card pane" id="w2" data-g="pcw" hidden><div class="ex">The sun <b>was shining</b> and birds <b>were singing</b>.</div></div>
+<div class="card pane" id="w3" data-g="pcw" hidden><div class="ex">Mum <b>was cooking</b> while I <b>was studying</b>.</div></div>
+<div class="card pane" id="w4" data-g="pcw" hidden><div class="ex">I <b>was walking</b> home when it <b>started</b> to rain.</div></div>
+<p class="m">Маркери: while, when, at 5 o’clock yesterday, all evening</p>
+<div class="dark"><h2>Лайфхак</h2><p>Continuous = що відбувалося, Simple = що сталося.</p><div class="ex">While I <b>was crossing</b> the street, I <b>saw</b> my friend.</div></div>
+</section>
+
+<section data-t="Past Perfect" hidden>
+<h2>Past Perfect: що було раніше</h2>
+<p><b>Коли:</b> дія відбулася раніше за іншу дію в минулому: передісторія, причина, результат. Майже завжди йде разом із Past Simple.</p>
+<div class="seg" data-g="pp">
+<button class="on" data-p="pp1">Ствердження</button><button data-p="pp2">Заперечення</button><button data-p="pp3">Питання</button></div>
+<div class="card pane" id="pp1" data-g="pp"><p class="lbl">HAD + V3</p><div class="ex">She <b>had left</b> before I arrived.</div></div>
+<div class="card pane" id="pp2" data-g="pp" hidden><p class="lbl">HADN’T + V3</p><div class="ex">I <b>hadn’t seen</b> him before.</div></div>
+<div class="card pane" id="pp3" data-g="pp" hidden><p class="lbl">HAD + ПІДМЕТ + V3</p><div class="ex"><b>Had</b> you <b>met</b> her before?</div></div>
+<div class="seg" data-g="ppu">
+<button class="on" data-p="u1">Приклади</button><button data-p="u2">Можна не вживати</button><button data-p="u3">Обов’язковий</button></div>
+<div class="card pane" id="u1" data-g="ppu"><div class="ex">When I got to the cinema, the film <b>had</b> already <b>started</b>.</div><div class="ex">He was upset because he <b>had failed</b> the test.</div><div class="ex">I <b>had never seen</b> snow before I came to Canada.</div><p class="m">Маркери: already, just, before, by the time, after, never … before</p></div>
+<div class="card pane" id="u2" data-g="ppu" hidden><p><b>1. Є before / after.</b> Вони самі показують порядок, тож обидва варіанти правильні:</p>
+<div class="ex">After I <b>finished</b> my homework, I went out.<br>= After I <b>had finished</b> my homework, I went out.</div>
+<div class="ex">She <b>left</b> before I arrived.<br>= She <b>had left</b> before I arrived.</div>
+<p><b>2. Дії йдуть по черзі.</b> Усе в Past Simple:</p><div class="ex">I <b>opened</b> the door and <b>saw</b> a box.</div></div>
+<div class="card pane" id="u3" data-g="ppu" hidden><p>Немає ні before / after, ні зрозумілої послідовності, а перша дія пояснює другу.</p>
+<div class="ex">When I <b>arrived</b>, she <b>left</b>.<br><span class="m">Спочатку я прийшов, потім вона пішла.</span></div>
+<div class="ex">When I <b>arrived</b>, she <b>had left</b>.<br><span class="m">Вона пішла ще до мого приходу.</span></div>
+<div class="ex">He was upset because he <b>had failed</b> the test.<br><span class="m">Зрозуміла причина.</span></div>
+<p><b>Правило:</b> якщо без Past Perfect речення може означати щось інше, вживай його.</p></div>
+</section>
+
+<section data-t="Історія" hidden>
+<h2>Усе разом</h2>
+<p class="m">Три шари в одній історії.</p>
+<div class="dark">
+<div class="ex">It <b>was</b> a cold night and the wind <b>was blowing</b> hard.<br><span class="m" style="color:#CFEAD9">фон: Past Continuous</span></div>
+<div class="ex">Tom <b>opened</b> the door and <b>saw</b> a box on the floor.<br><span class="m" style="color:#CFEAD9">події: Past Simple</span></div>
+<div class="ex">Someone <b>had left</b> it there while he <b>was sleeping</b>.<br><span class="m" style="color:#CFEAD9">передісторія: Past Perfect</span></div></div>
+<div class="card"><div class="ex">When I <b>arrived</b> at the party, everyone <b>was dancing</b>.</div><div class="ex">My friend <b>had</b> already <b>gone</b> home.</div></div>
+</section>
+
+<section data-t="Помилки" hidden>
+<h2>Типові помилки</h2>
+<div class="card">
+<div class="row"><div><p class="lbl">НЕПРАВИЛЬНО</p>I was seeing him yesterday.</div><div><p class="lbl">ПРАВИЛЬНО</p>I <b>saw</b> him yesterday.<br><span class="m">Завершена дія.</span></div></div>
+<div class="row"><div><p class="lbl">НЕПРАВИЛЬНО</p>When I came, she cooked.</div><div><p class="lbl">ПРАВИЛЬНО</p>When I came, she <b>was cooking</b>.<br><span class="m">Процес у момент.</span></div></div>
+<div class="row"><div><p class="lbl">НЕПРАВИЛЬНО</p>The film started when we arrived.</div><div><p class="lbl">ПРАВИЛЬНО</p>The film <b>had started</b> when we arrived.<br><span class="m">Почався раніше.</span></div></div>
+<div class="row"><div><p class="lbl">НЕПРАВИЛЬНО</p>He didn’t went.</div><div><p class="lbl">ПРАВИЛЬНО</p>He <b>didn’t go</b>.<br><span class="m">Після didn’t завжди V1.</span></div></div></div>
+</section>
+
+<section data-t="Шпаргалка" hidden>
+<h2>Шпаргалка</h2>
+<div class="card">
+<div class="row"><div>Дії йдуть по черзі</div><div><b>Past Simple</b></div></div>
+<div class="row"><div>Фон, процес, дія в момент</div><div><b>Past Continuous</b></div></div>
+<div class="row"><div>Перервана дія</div><div><b>Past Continuous + Past Simple</b></div></div>
+<div class="row"><div>Є before / after</div><div><b>Past Simple або Past Perfect</b></div></div>
+<div class="row"><div>Передісторія, причина, «вже було»</div><div><b>Past Perfect</b></div></div></div>
+</section>
+
+<div class="pn"><button id="prev">← Назад</button><button id="next">Далі →</button></div>
+<p class="foot">English Hero · Хмельницький</p>
+</div>
+<script>
+(function(){
+var secs=[].slice.call(document.querySelectorAll('section')),nav=document.getElementById('nav'),cur=0;
+function show(i){cur=i;secs.forEach(function(s,k){s.hidden=k!==i});
+[].forEach.call(nav.children,function(b,k){b.classList.toggle('on',k===i);if(k===i)b.setAttribute('aria-current','true');else b.removeAttribute('aria-current')});
+document.getElementById('prev').disabled=i===0;document.getElementById('next').disabled=i===secs.length-1;
+window.scrollTo(0,0)}
+secs.forEach(function(s,k){var b=document.createElement('button');b.textContent=s.getAttribute('data-t');b.onclick=function(){show(k)};nav.appendChild(b)});
+document.getElementById('prev').onclick=function(){if(cur>0)show(cur-1)};
+document.getElementById('next').onclick=function(){if(cur<secs.length-1)show(cur+1)};
+[].forEach.call(document.querySelectorAll('[data-go]'),function(t){t.onclick=function(){show(+t.getAttribute('data-go'))}});
+[].forEach.call(document.querySelectorAll('.seg'),function(sg){var g=sg.getAttribute('data-g');
+[].forEach.call(sg.children,function(b){b.onclick=function(){
+[].forEach.call(sg.children,function(x){x.classList.toggle('on',x===b)});
+[].forEach.call(document.querySelectorAll('.pane[data-g="'+g+'"]'),function(p){p.hidden=p.id!==b.getAttribute('data-p')})}})});
+show(0);
+})();
+</script></body></html>
