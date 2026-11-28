@@ -394,28 +394,41 @@ function viewRes() {
     <button class="btn alt" onclick="csv()">Експорт CSV</button><button class="btn red" onclick="delAllRes()">Видалити всі результати цього завдання</button></div><div class="mut" style="margin-top:8px">Папки: група → завдання → учні. Натисніть на учня, щоб побачити роботу так, як її бачив він. Усі результати також лежать в аркуші Submissions вашої таблиці.</div></div><div id="rd"></div><div id="rl"></div>`;
   loadRes();
 }
-function resTree(list) {   // група → завдання → учні
-  list.forEach((r, i) => r._i = i);
-  const avgOf = l => Math.round(l.reduce((a, r) => a + r.percent, 0) / l.length);
-  return Array.from(new Set(list.map(r => r.group))).sort(grpOrder).map(g => {
-    const rs = list.filter(r => r.group === g);
+const nstu = r => String(r.student || '').trim().toLowerCase();
+function groupAttempts(list) {   // спроби кожного учня в межах завдання; ЗАРАХОВУЄТЬСЯ остання
+  T.att = {}; list.forEach((r, i) => { r._i = i; const k = r.assignmentId + '|' + nstu(r); (T.att[k] = T.att[k] || []).push(r); });
+  Object.keys(T.att).forEach(k => T.att[k].sort((a, b) => (a.attempt || 1) - (b.attempt || 1) || a.row - b.row));
+  return Object.keys(T.att).map(k => T.att[k][T.att[k].length - 1]);
+}
+function resTree(list) {   // група → завдання → учні (остання спроба; усі спроби всередині)
+  const latest = groupAttempts(list), avgOf = l => l.length ? Math.round(l.reduce((a, r) => a + r.percent, 0) / l.length) : 0;
+  return Array.from(new Set(latest.map(r => r.group))).sort(grpOrder).map(g => {
+    const rs = latest.filter(r => r.group === g);
     const inner = Array.from(new Set(rs.map(r => r.assignmentId))).map(aid => {
       const l = rs.filter(r => r.assignmentId === aid).sort((a, b) => a.student.localeCompare(b.student));
       return fold('res|' + g + '|' + aid, 'sub', '📝 ' + esc(l[0].title) + ` <span class="mut">· середній ${avgOf(l)}%</span>`, l.length,
-        `<div class="scroll" style="padding:0 14px 10px"><table><tr><th>Учень</th><th>Бали</th><th>%</th><th>Статус</th><th>Здано</th></tr>${l.map(r => `<tr class="c" onclick="detail(${r._i})"><td>${esc(r.student)}</td><td>${r.score}/${r.max}</td><td>${r.percent}%</td><td><span class="tag ${/Очікує/.test(r.status) ? 'w' : ''}">${esc(r.status)}</span></td><td>${esc(r.time)}</td></tr>`).join('')}</table></div>`);
+        `<div style="padding:0 14px"><button class="btn alt sm" onclick="retryAll('${aid}',true)">Дозволити повтор усім</button> <button class="btn alt sm" onclick="retryAll('${aid}',false)">Скасувати всі дозволи</button></div>
+        <div class="scroll" style="padding:6px 14px 10px"><table><tr><th>Учень</th><th>Спроб</th><th>Бали</th><th>%</th><th>Статус</th><th>Здано</th><th>Ще спроба</th></tr>${l.map(r => `<tr class="c" onclick="detail(${r._i})"><td>${esc(r.student)}</td><td>${T.att[aid + '|' + nstu(r)].length}</td><td>${r.score}/${r.max}</td><td>${r.percent}%</td><td><span class="tag ${/Очікує/.test(r.status) ? 'w' : ''}">${esc(r.status)}</span></td><td>${esc(r.time)}</td><td onclick="event.stopPropagation()"><input type="checkbox" ${r.retry ? 'checked' : ''} onchange="toggleRetry(${r._i},this.checked)" title="Дозволити учню ще одну спробу"></td></tr>`).join('')}</table></div>`);
     }).join('');
     return fold('resg|' + g, '', '📁 ' + esc(g) + ` <span class="mut">· середній ${avgOf(rs)}%</span>`, rs.length, inner);
   }).join('') || '<div class="mut">Результатів поки немає</div>';
 }
+function drawRes() {
+  if (!$('rl')) return;
+  const tree = resTree(T.res), lat = Object.keys(T.att).map(k => T.att[k][T.att[k].length - 1]);
+  const avg = lat.length ? Math.round(lat.reduce((a, r) => a + r.percent, 0) / lat.length) : 0;
+  $('rl').innerHTML = `<div class="card"><h2>Робіт: ${lat.length} · спроб: ${T.res.length} · середній результат: ${avg}%</h2><div class="mut">У середніх рахується остання спроба. Галочка «Ще спроба» дозволяє учневі виконати завдання ще раз; після здачі дозвіл знімається, а попередні спроби лишаються.</div>${T.miss || ''}${tree}</div>`;
+}
 const loadRes = () => run(async () => {
   if (!$('rs')) return; const id = $('rs').value; T.res = await api('results', { assignmentId: id }); if (!$('rl')) return;
   if (id) { const a = T.asg.find(x => x.id === id); if (a) { T.open['resg|' + a.group] = true; T.open['res|' + a.group + '|' + id] = true; } }   // обране завдання відкриваємо
-  let miss = ''; if (id) { const m = await api('notSubmitted', { assignmentId: id }); miss = m.length ? `<p class="mut">Ще не здали: ${m.map(esc).join(', ')}</p>` : '<p class="mut">Здали всі 👍</p>'; }
-  if (!$('rl')) return;
-  const avg = T.res.length ? Math.round(T.res.reduce((a, r) => a + r.percent, 0) / T.res.length) : 0;
-  $('rl').innerHTML = `<div class="card"><h2>Робіт: ${T.res.length} · середній результат: ${avg}%</h2>${miss}${resTree(T.res)}</div>`;
-  if ($('rd')) $('rd').innerHTML = '';
+  T.miss = ''; if (id) { const m = await api('notSubmitted', { assignmentId: id }); T.miss = m.length ? `<p class="mut">Ще не здали: ${m.map(esc).join(', ')}</p>` : '<p class="mut">Здали всі 👍</p>'; }
+  if (!$('rl')) return; drawRes(); if ($('rd')) $('rd').innerHTML = '';
 });
+/* дозвіл на повторну спробу: одному учневі або всім у завданні */
+const toggleRetry = (i, on) => run(async () => { try { const r = T.res[i]; await api('allowRetry', { assignmentId: r.assignmentId, student: r.student, on }); r.retry = on; toast(on ? 'Повторну спробу дозволено' : 'Дозвіл скасовано'); } finally { drawRes(); } });
+const retryAll = (aid, on) => run(async () => { const n = await api('allowRetry', { assignmentId: aid, on });
+  Object.keys(T.att).forEach(k => { if (k.indexOf(aid + '|') === 0) { const l = T.att[k]; l[l.length - 1].retry = on; } }); drawRes(); toast(on ? 'Повтор дозволено (' + n + ' учн.)' : 'Усі дозволи скасовано'); });
 
 /* ---- перегляд роботи так, як її бачив учень ---- */
 function rvChip(d) {
@@ -466,24 +479,27 @@ async function getView(aid) {
 }
 function detail(i) { run(async () => {
   const r = T.res[i], view = await getView(r.assignmentId); if (!$('rd')) return;
+  const atts = T.att[r.assignmentId + '|' + nstu(r)] || [r], isLast = atts[atts.length - 1] === r;
   const by = {}; r.details.forEach(d => by[d.key] = d);
   const manualMax = r.details.filter(d => d.manual).reduce((a, d) => a + d.points, 0);
-  $('rd').innerHTML = `<div class="rv"><div class="card"><div class="row"><div><h2 style="margin:0">${esc(r.student)} <span class="mut">· ${esc(r.group)}</span></h2><div class="mut">${esc(r.title)} · ${esc(r.time)}</div></div>
+  $('rd').innerHTML = `<div class="rv"><div class="card"><div class="row"><div><h2 style="margin:0">${esc(r.student)} <span class="mut">· ${esc(r.group)}</span></h2><div class="mut">${esc(r.title)} · ${esc(r.time)} · спроба ${r.attempt || 1} з ${atts.length}</div></div>
     <div><span class="tag">${r.score}/${r.max} · ${r.percent}%</span> <span class="tag ${/Очікує/.test(r.status) ? 'w' : ''}">${esc(r.status)}</span></div><button class="btn alt sm" onclick="$('rd').innerHTML=''">Закрити</button></div>
     ${r.comment ? `<div class="mut" style="margin-top:6px">Ваш коментар: ${esc(r.comment)}</div>` : ''}
+    ${atts.length > 1 ? `<div style="margin-top:8px">Спроби: ${atts.map(x => `<button class="btn ${x === r ? '' : 'alt'} sm" onclick="detail(${x._i})">Спроба ${x.attempt || 1} · ${x.percent}%</button>`).join(' ')}</div>` : ''}
+    ${isLast ? `<label style="display:block;margin-top:8px"><input type="checkbox" ${r.retry ? 'checked' : ''} onchange="toggleRetry(${r._i},this.checked)"> Дозволити учню ще одну спробу</label>` : ''}
     <div class="mut" style="margin-top:6px">Зелений — правильно, червоний — помилка (поруч правильна відповідь), жовтий — відкрита відповідь.</div></div>
     ${view ? rvParts(view, by) + rvHTML(view, by) : plainDetail(r)}
     <div class="card">${manualMax ? `<div class="row"><div><label class="f">Бали за відкриті відповіді (0–${manualMax})</label><input type="number" id="ms" min="0" max="${manualMax}"></div><div><label class="f">Коментар учню</label><input id="mc" value="${esc(r.comment)}"></div><button class="btn" onclick="gradeM(${i})">Зберегти оцінку</button></div>` : ''}
-    <p style="margin-bottom:0"><button class="btn red" onclick="delRes(${i})">Видалити цей результат (учень зможе виконати завдання знову)</button></p></div></div>`;
+    <p style="margin-bottom:0"><button class="btn red" onclick="delRes(${i})">Видалити цю спробу${atts.length > 1 ? ' (попередня стане останньою)' : ' (учень зможе виконати завдання знову)'}</button></p></div></div>`;
   $('rd').scrollIntoView({ behavior: 'smooth' }); }); }
-const delRes = i => confirm('Видалити цей результат? Учень зможе виконати завдання знову.') && run(async () => { const r = T.res[i]; await api('deleteSubmission', { row: r.row, assignmentId: r.assignmentId, student: r.student }); await loadRes(); toast('Результат видалено'); });
+const delRes = i => confirm((T.att[T.res[i].assignmentId + '|' + nstu(T.res[i])] || []).length > 1 ? 'Видалити цю спробу? Попередня стане останньою.' : 'Видалити цей результат? Учень зможе виконати завдання знову.') && run(async () => { const r = T.res[i]; await api('deleteSubmission', { row: r.row, assignmentId: r.assignmentId, student: r.student }); await loadRes(); toast('Результат видалено'); });
 const delAllRes = () => { const id = $('rs').value; if (!id) return toast('Спочатку оберіть конкретне завдання у списку', 1);
   if (confirm('Видалити ВСІ результати цього завдання? Це не можна скасувати.')) run(async () => { await api('deleteSubmissions', { assignmentId: id }); await loadRes(); toast('Результати видалено'); }); };
 const gradeM = i => run(async () => { await api('gradeManual', { row: T.res[i].row, score: $('ms').value, comment: $('mc').value }); await loadRes(); toast('Оцінку збережено'); });
 
 function csv() {
   const c = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-  const lines = [['Дата', 'Група', 'Учень', 'Завдання', 'Бали', 'Максимум', 'Відсоток', 'Статус', 'Коментар']].concat(T.res.map(r => [r.time, r.group, r.student, r.title, r.score, r.max, r.percent, r.status, r.comment]));
+  const lines = [['Дата', 'Група', 'Учень', 'Завдання', 'Бали', 'Максимум', 'Відсоток', 'Статус', 'Коментар', 'Спроба']].concat(T.res.map(r => [r.time, r.group, r.student, r.title, r.score, r.max, r.percent, r.status, r.comment, r.attempt || 1]));
   const blob = new Blob(['\ufeff' + lines.map(l => l.map(c).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'english-hero-results.csv'; a.click();
 }

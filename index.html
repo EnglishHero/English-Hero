@@ -230,7 +230,7 @@ async function showList(skip) {
 function hwRow(a) {
   const nw = newHw(a);
   return `<div class="item ${nw ? 'isnew' : ''}"><div style="display:flex;align-items:flex-start"><span class="ic">📝</span><div><h3>${nw ? '<span class="tag new">NEW</span> ' : ''}${esc(a.title)}</h3><div class="mut">${a.parts && a.parts.length ? esc(a.parts.join(' · ')) + '<br>' : ''}${a.deadline ? 'Deadline: ' + esc(a.deadline) : 'No deadline'}</div></div></div>
-    <div>${a.done ? `<span class="tag ${a.pending ? 'warn' : ''}">${a.pending ? 'Pending teacher check' : a.percent + '%'}</span> <button class="btn alt" onclick="openResult('${a.id}')">Result</button>` : `<button class="btn" onclick="openTask('${a.id}')">Start</button>`}</div></div>`;
+    <div>${a.done ? `<span class="tag ${a.pending ? 'warn' : ''}">${a.pending ? 'Pending teacher check' : a.percent + '%'}</span> ${a.retry ? '<span class="tag new">Retry allowed</span> ' : ''}<button class="btn alt" onclick="openResult('${a.id}')">Result</button>${a.retry ? ` <button class="btn" onclick="openTask('${a.id}')">New attempt</button>` : ''}` : `<button class="btn" onclick="openTask('${a.id}')">Start</button>`}</div></div>`;
 }
 function deckRow(d) {
   const nb = newBlocks(d);
@@ -278,7 +278,7 @@ const head = (s, si) => `<h3>${esc(s.title || 'Exercise ' + (si + 1))}</h3>${s.i
 function renderTask() {
   const hw = S.task.hw;
   S.total = hw.sections.reduce((a, s) => a + s.items.length, 0);
-  app(`<a class="backl" onclick="back()">← Back to my units</a>${S.practice ? '<div class="card" style="background:#fff8e1;border-color:#f2d675"><b>Practice mode</b> — this attempt is not saved. Your first result is already with your teacher.</div>' : ''}<h2>${esc(hw.title)}</h2><div class="mut" style="margin-bottom:12px">${S.task.unit ? esc(S.task.unit) + ' · ' : ''}${S.task.deadline ? 'Deadline: ' + esc(S.task.deadline) + ' · ' : ''}Your answers are saved automatically.</div>` +
+  app(`<a class="backl" onclick="back()">← Back to my units</a>${S.practice ? '<div class="card" style="background:#fff8e1;border-color:#f2d675"><b>Practice mode</b> — this attempt is not saved. Your result is already with your teacher.</div>' : ''}<h2>${esc(hw.title)}</h2><div class="mut" style="margin-bottom:12px">${S.task.unit ? esc(S.task.unit) + ' · ' : ''}${S.task.deadline ? 'Deadline: ' + esc(S.task.deadline) + ' · ' : ''}Your answers are saved automatically.</div>` +
     hw.sections.map((s, si) => `<div class="card">${head(s, si)}
       ${INL(s.type) ? '' : (s.text ? `<div class="txt">${rich(s.text)}</div>` : '')}${media(s.imageUrl, 'img')}${media(s.audioUrl, 'audio')}
       ${INL(s.type) ? inlineHTML(s, si) : s.items.map((it, i) => itemHTML(s, si, it, i)).join('')}</div>`).join('') +
@@ -404,16 +404,16 @@ async function submitTask() {
   try {
     const r = await api('submit', { name: S.name, group: S.group, assignmentId: S.task.assignmentId, answers: S.ans });
     store.del('eh_draft_' + S.name + S.task.assignmentId);
-    const it = S.list.find(x => x.id === S.task.assignmentId); if (it) { it.done = true; it.percent = r.percent; it.pending = !!r.pendingManual; }
+    const it = S.list.find(x => x.id === S.task.assignmentId); if (it) { it.done = true; it.percent = r.percent; it.pending = !!r.pendingManual; it.retry = false; it.attempts = (it.attempts || 0) + 1; }
     showResult(r, S.task.hw, true);
   } catch (e) { $('e').textContent = e.message; $('sb').disabled = false; }
 }
 
 /* ---------- Result: помилки показуються прямо в тексті вправ ---------- */
-async function openResult(id) {
+async function openResult(id, attempt) {
   app('<div class="card mut">Loading…</div>');
   try {
-    let r, hw; const q = { name: S.name, group: S.group, assignmentId: id };
+    let r, hw; const q = { name: S.name, group: S.group, assignmentId: id, attempt: attempt || undefined };
     try { r = await api('result', q); hw = r.hw; }
     catch (e1) {
       if (String(e1.raw || '').indexOf('Невідома дія') < 0) throw e1;   // справжня помилка — не повторюємо
@@ -455,18 +455,22 @@ function reviewHTML(hw, by) {
     return `<div class="card">${head(s, si)}${!INL(s.type) && s.text ? `<div class="txt">${rich(s.text)}</div>` : ''}${body}</div>`;
   }).join('');
 }
+function attemptsBar(r) {   // історія спроб (якщо їх кілька): зараховується остання
+  if (!r.attempts || r.attempts.length < 2) return '';
+  return `<div class="card"><h3>Your attempts</h3>${r.attempts.map(a => `<button class="btn ${a.n === r.attempt ? '' : 'alt'}" style="margin:3px 6px 3px 0" onclick="openResult('${r.assignmentId}',${a.n})">Attempt ${a.n} · ${a.pending ? '…' : a.percent + '%'}</button>`).join('')}<div class="mut" style="margin-top:6px">Your latest attempt counts.</div></div>`;
+}
 function showResult(r, hw, replace, practice) {
   const by = {}; r.details.forEach(d => by[d.key] = d); S.last = { hw, by };
   const ok = r.details.filter(d => d.ok).length, bad = r.details.filter(d => !d.manual && !d.ok).length, man = r.details.filter(d => d.manual).length;
   const pend = r.pendingManual || r.pending;
   const msg = r.percent >= 90 ? 'Excellent work! 🌟' : r.percent >= 70 ? 'Good job! 👍' : r.percent >= 50 ? 'Not bad — review your mistakes below.' : 'Keep practising — check the mistakes below.';
-  app(`<a class="backl" onclick="back()">← Back to my units</a><div class="card sum"><div class="mut">Your result</div><div class="big">${r.percent}%</div>
-    <div>${r.score}${r.max ? ' / ' + r.max : ''} points</div><p><b>${msg}</b></p>${practice ? '<p><span class="tag warn">Practice — not saved. Your first result is already with your teacher.</span></p>' : ''}
+  app(`<a class="backl" onclick="back()">← Back to my units</a>${practice ? '' : attemptsBar(r)}<div class="card sum"><div class="mut">Your result${r.attempts && r.attempts.length > 1 ? ' · attempt ' + r.attempt : ''}</div><div class="big">${r.percent}%</div>
+    <div>${r.score}${r.max ? ' / ' + r.max : ''} points</div><p><b>${msg}</b></p>${practice ? '<p><span class="tag warn">Practice — not saved. Your result is already with your teacher.</span></p>' : ''}
     <div class="legend"><span class="a ok">✓ ${ok} correct</span><span class="a bad">✗ ${bad} mistakes</span>${man ? `<span class="a man">${man} for teacher</span>` : ''}</div>
     ${pend ? '<p><span class="tag warn">Open answers will be checked by your teacher — your percentage may change</span></p>' : ''}
     ${r.comment ? `<div class="txt"><b>Teacher’s comment:</b><br>${esc(r.comment)}</div>` : ''}</div>` +
     (hw ? partsHTML(hw, by) + '<p class="mut">Your mistakes are marked in red; the correct answer is shown in green.</p>' + reviewHTML(hw, by) : '') +
-    `${hw ? '<button class="btn" onclick="tryAgain()">Try again</button> ' : ''}<button class="btn alt" onclick="back()">Back to my units</button>`);
+    `${hw ? '<button class="btn" onclick="tryAgain()" title="Practise without saving">Practice</button> ' : ''}<button class="btn alt" onclick="back()">Back to my units</button>`);
   replace ? hrep('result') : push('result');
 }
 
